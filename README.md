@@ -4,6 +4,12 @@ A private, bilingual learning workspace for books, articles, vocabulary, recall,
 
 ## Start here (one-time setup)
 
+### This workspace's setup status
+
+The private repository is [Rezquellah/reading-room](https://github.com/Rezquellah/reading-room). Supabase project `oseyotfouanfznjnzils` has migration `001_reading_room.sql` applied, with both tables protected by RLS. This computer's ignored `.env.local` contains the public connection settings. Email/password signup and email confirmation are enabled. The live database passed owner save/read, French text, cross-user read/update/export isolation and invalid source-link checks in a transaction that was rolled back; no test accounts or notes were retained. Real email signup/login and deployed PDF verification are still pending.
+
+The steps below explain how to configure another checkout or deployment. Do not re-run the initial migration on the already-configured database.
+
 1. Install Node.js 22 LTS or newer. Open a terminal in this folder and run `npm ci`.
 2. Create a project at [Supabase](https://supabase.com/dashboard). Keep your database password in your password manager; the app does not need it.
 3. In Supabase, open **SQL Editor → New query**. Paste the entire contents of `supabase/migrations/001_reading_room.sql`, then click **Run**. Run it once in a new project. It creates the tables, private-data policies, and atomic save/review/import functions.
@@ -98,7 +104,7 @@ Validated locally:
 
 ## Remaining external checks and boundaries
 
-- No Supabase credentials or Vercel deployment were supplied. Real email delivery, account signup/login, cross-device persistence in your project, and deployed PDF downloads still require the setup above and final smoke tests. No production connection or deployment is claimed.
+- Supabase is connected and database isolation was checked on the real project. Real email delivery, account signup/login, cross-device persistence, and deployed PDF downloads still need final smoke tests. Vercel setup is in progress.
 - Saves are explicit. There is no automatic merging of concurrent drafts or offline synchronization.
 - French navigation, fields, and main workflows are translated. Some infrastructure/setup text and backend error messages remain English.
 - Notes support text formatting, not pasted images/tables, embedded media, or mathematical typesetting. Evidence assessments and definitions are user-entered.
