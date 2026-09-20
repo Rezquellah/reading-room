@@ -6,6 +6,8 @@ A private, bilingual learning workspace for books, articles, vocabulary, recall,
 
 ### This workspace's setup status
 
+Live website: **[Reading Room](https://reading-room-silk.vercel.app)**. Vercel is connected to the private repository's `main` branch, with both Supabase environment variables configured for Production and Preview. The initial cloud production build succeeded. Supabase's Site URL is set to the live HTTPS address, and the deployed dashboard and account dialog were checked in a browser. Create your own account on the live site, confirm the email, and sign in. Password entry is left to the account owner. Signed-in production workflows and production PDF downloads still require that account.
+
 The private repository is [Rezquellah/reading-room](https://github.com/Rezquellah/reading-room). Supabase project `oseyotfouanfznjnzils` has migration `001_reading_room.sql` applied, with both tables protected by RLS. This computer's ignored `.env.local` contains the public connection settings. Email/password signup and email confirmation are enabled. The live database passed owner save/read, French text, cross-user read/update/export isolation and invalid source-link checks in a transaction that was rolled back; no test accounts or notes were retained. Real email signup/login and deployed PDF verification are still pending.
 
 The steps below explain how to configure another checkout or deployment. Do not re-run the initial migration on the already-configured database.
@@ -104,7 +106,7 @@ Validated locally:
 
 ## Remaining external checks and boundaries
 
-- Supabase is connected and database isolation was checked on the real project. Real email delivery, account signup/login, cross-device persistence, and deployed PDF downloads still need final smoke tests. Vercel setup is in progress.
+- Supabase and Vercel are configured, the cloud production build succeeded, and the deployed account screen loads. Database isolation was checked on the real Supabase project. Real email delivery, account signup/login, cross-device persistence, and authenticated deployed PDF downloads still need final smoke tests with the owner's account.
 - Saves are explicit. There is no automatic merging of concurrent drafts or offline synchronization.
 - French navigation, fields, and main workflows are translated. Some infrastructure/setup text and backend error messages remain English.
 - Notes support text formatting, not pasted images/tables, embedded media, or mathematical typesetting. Evidence assessments and definitions are user-entered.

@@ -7,6 +7,8 @@
 - [x] Server PDF export and atomic backup/import with duplicate skipping
 - [x] Apply migration to Supabase; verify live RLS, French text, cross-user read/update/export isolation and source ownership in a rolled-back SQL transaction
 - [ ] Verify real email signup/login and authenticated cross-device workflows
+- [x] Private GitHub repository connected to Vercel; production build deployed with Supabase environment values
+- [x] Live dashboard/account screen opens; Supabase email redirect points to the live website
 - [ ] Verify production PDF downloads after Vercel deployment
 - [x] 19 automated model, PostgreSQL/RLS and PDF checks
 - [x] Repeated/concurrent PDF exports preserve searchable Unicode text; actual browser downloads match saved notes
@@ -16,4 +18,4 @@
 - [x] Desktop/mobile inspection and automated WCAG contrast/accessibility checks
 - [x] Production build and strict type check
 
-Supabase is configured and the code is in the private GitHub repository. Vercel deployment and real email-account acceptance checks remain. See README for verification boundaries and operating limits.
+Supabase, GitHub and Vercel are configured. Live site: https://reading-room-silk.vercel.app. Real email-account acceptance checks and authenticated production PDF downloads remain pending the owner's signup. See README for verification boundaries and operating limits.
