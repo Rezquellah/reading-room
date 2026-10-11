@@ -1,51 +1,59 @@
 import { describe, it, expect } from "vitest";
-import {
-  recordSchema,
-  newRecord,
-  nextReview,
-  fold,
-  backupSchema,
-  safeUrl,
-} from "../src/lib/model";
-import { clean } from "../src/lib/sanitize";
-describe("content and review model", () => {
-  it("requires just a title and preserves French", () => {
-    const record = {
-      ...newRecord("chapter"),
-      title: "Écouter : l’expérience",
-      parent_id: crypto.randomUUID(),
-    };
-    expect(recordSchema.parse(record).title).toBe(record.title);
-    expect(recordSchema.safeParse(newRecord("book")).success).toBe(false);
+import { progress, plainText, recordSchema } from "../src/lib/model";
+import { schedule } from "../src/lib/scheduling";
+describe("reading progress", () => {
+  it("calculates chapter and page progress and clamps bad ranges", () => {
+    expect(progress(7, 20)).toBe(35);
+    expect(progress(200, 100)).toBe(100);
+    expect(progress(-1, 10)).toBe(0);
+    expect(progress(3, 0)).toBe(0);
   });
-  it("normalizes search without changing saved content", () =>
-    expect(fold("Éléphant, être")).toBe("elephant, etre"));
-  it("rejects executable and malformed links", () => {
-    expect(safeUrl.safeParse("javascript:alert(1)").success).toBe(false);
-    expect(safeUrl.safeParse("https://example.com/image.png").success).toBe(
-      true,
-    );
-    expect(safeUrl.safeParse("https://user:pass@example.com").success).toBe(
-      false,
-    );
+});
+describe("structured notes", () => {
+  it("indexes French text inside tables and nested paragraphs", () =>
+    expect(
+      plainText({
+        type: "doc",
+        content: [
+          {
+            type: "table",
+            content: [
+              {
+                type: "paragraph",
+                content: [{ text: "Écouter et réfléchir" }],
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe("Écouter et réfléchir"));
+  it("rejects missing ownership and blank titles", () => {
+    expect(
+      recordSchema.safeParse({
+        title: "",
+        kind: "book",
+        workspace_id: "not-a-uuid",
+      }).success,
+    ).toBe(false);
   });
-  it("strips active content but preserves meaningful pasted formatting", () => {
-    const result = clean(
-      '<p onclick="alert(1)">Été <strong>français</strong></p><script>alert(1)</script><a href="javascript:alert(1)">test</a>',
-    );
-    expect(result).toContain("<strong>français</strong>");
-    expect(result).not.toMatch(/onclick|javascript|<script/);
+});
+describe("FSRS", () => {
+  it("schedules every recall grade in the future with persisted state", () => {
+    const now = new Date("2026-10-11T12:00:00Z");
+    for (const rating of [1, 2, 3, 4]) {
+      const r = schedule(undefined, rating, now);
+      expect(r.card.due.getTime()).toBeGreaterThan(now.getTime());
+      expect(r.card.reps).toBe(1);
+      expect(r.log.rating).toBe(rating);
+    }
   });
-  it("uses deterministic UTC intervals including DST boundaries", () => {
-    const date = new Date("2026-03-29T00:30:00.000Z");
-    expect(nextReview(0, "again", date).due).toBe("2026-03-29T00:40:00.000Z");
-    expect(nextReview(0, "good", date)).toEqual({
-      interval: 2,
-      due: "2026-03-31T00:30:00.000Z",
-    });
-    expect(nextReview(10, "hard", date).interval).toBe(12);
-    expect(nextReview(10, "easy", date).interval).toBe(35);
+  it("rehydrates dates after a JSON round trip and advances repetitions", () => {
+    const first = schedule(undefined, 3, new Date("2026-10-11T12:00:00Z"));
+    const saved = JSON.parse(JSON.stringify(first.card));
+    const second = schedule(saved, 3, new Date(first.card.due));
+    expect(second.card.reps).toBe(2);
+    expect(second.card.due.getTime()).toBeGreaterThan(first.card.due.getTime());
   });
-  it("rejects unknown backup formats before import", () =>
-    expect(backupSchema.safeParse({ records: [] }).success).toBe(false));
+  it("rejects invalid grades", () =>
+    expect(() => schedule(undefined, 0)).toThrow());
 });

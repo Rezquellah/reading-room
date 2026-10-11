@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
-  devIndicators: false,
   distDir: process.env.READING_ROOM_TEST_DIST || ".next",
-  serverExternalPackages: ["@react-pdf/renderer"],
-  outputFileTracingIncludes: { "/api/pdf": ["./public/fonts/**/*"] },
-  poweredByHeader: false,
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
+  outputFileTracingIncludes: {
+    "/api/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
+  },
   async headers() {
     return [
       {

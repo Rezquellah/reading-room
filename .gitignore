@@ -1,10 +1,11 @@
 node_modules/
 .next/
+.next-test/
 .env*
 !.env.example
+.vercel/
 test-results/
 playwright-report/
 *.tsbuildinfo
-tmp/
-.next-test/
-.vercel/
+
+.vercel

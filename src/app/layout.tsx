@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Reading Room — A little wiser, every day",
+  title: "Reading Room — A home for your ideas",
   description:
-    "Your personal place to read, remember, and put ideas into practice.",
+    "Read deeply. Remember longer. Your personal library and learning journal.",
 };
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

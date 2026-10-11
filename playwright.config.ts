@@ -1,22 +1,18 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
-  testDir: "./tests/browser",
-  fullyParallel: false,
+  testDir: "tests/browser",
   workers: 1,
   timeout: 90000,
   use: {
     baseURL: "http://127.0.0.1:3001",
+    channel: process.platform === "win32" ? "msedge" : "chromium",
     headless: true,
-    viewport: { width: 1440, height: 1000 },
-    launchOptions: {
-      channel: process.platform === "win32" ? "msedge" : undefined,
-    },
+    trace: "retain-on-failure",
   },
   webServer: {
-    command: "node scripts/start-ui-test-server.mjs",
+    command: "node scripts/test-server.mjs",
     url: "http://127.0.0.1:3001",
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
-  reporter: "list",
 });
