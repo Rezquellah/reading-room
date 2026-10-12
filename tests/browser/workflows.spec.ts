@@ -68,6 +68,17 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   );
   await page.getByRole("button", { name: "Insert table", exact: true }).click();
   await expect(editor.locator("table")).toBeVisible();
+  await page
+    .locator(".editor input[type=file]")
+    .setInputFiles({
+      name: "note-image.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    });
+  await expect(editor.locator("img")).toBeVisible();
   await page.getByRole("button", { name: "Save now", exact: true }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Saved" }),
@@ -78,6 +89,23 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await page.getByRole("button", { name: /Attention is a practice/ }).click();
   await expect(editor).toContainText("Écouter, réfléchir, apprendre.");
   await expect(editor.locator("table")).toBeVisible();
+  await expect(editor.locator("img")).toBeVisible();
+  await page.route("**/api/data", async (route) => {
+    if (route.request().method() === "POST")
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Offline test" }),
+      });
+    else await route.continue();
+  });
+  await editor.press("Control+End");
+  await editor.press("Enter");
+  await editor.pressSequentially("Offline thought safely recovered.");
+  await expect(page.getByRole("status")).toContainText("Not synced");
+  await page.unroute("**/api/data");
+  await page.getByRole("button", { name: "Save now", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
   await page
     .getByRole("button", { name: "Make recall card from selection" })
     .click();
@@ -178,7 +206,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "test-results/mobile.png", fullPage: true });
+  await page.screenshot({ path: "test-results/mobile.png", fullPage: true, animations: "disabled" });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

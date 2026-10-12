@@ -44,6 +44,7 @@ import {
 } from "@/lib/model";
 import { demoEntries, demoWorkspaces } from "@/lib/demo";
 import EntryForm from "./entry-form";
+import Insights from "./insights";
 const Editor = dynamic(() => import("./editor"), {
   ssr: false,
   loading: () => <div className="skeleton">Opening your writing space…</div>,
@@ -122,7 +123,8 @@ export default function Room({
     [busy, setBusy] = useState(false),
     [reverse, setReverse] = useState(false),
     [locale, setLocale] = useState("en"),
-    [favorites, setFavorites] = useState(false);
+    [favorites, setFavorites] = useState(false),
+    [since, setSince] = useState("");
   const entryRef = useRef(entries);
   useEffect(() => {
     entryRef.current = entries;
@@ -184,9 +186,10 @@ export default function Room({
     setMobile(false);
     setSession(null);
     setQuery("");
-    setStatus('All statuses');
-    setKind('All reading');
+    setStatus("All statuses");
+    setKind("All reading");
     setFavorites(false);
+    setSince("");
   }
   function open(e: Entry) {
     setSelected(e.id);
@@ -387,6 +390,7 @@ export default function Room({
                 ? e.kind === "journal"
                 : true) &&
         !e.data.archived &&
+        (!since || e.created_at.slice(0, 10) >= since) &&
         (!favorites || e.data.favorite) &&
         (kind === "All reading" || e.kind === kind.toLowerCase()) &&
         (status === "All statuses" || e.data.status === status) &&
@@ -1152,6 +1156,7 @@ export default function Room({
                   Your saved notes will find their way back to you here.
                 </p>
               )}
+              <Insights entries={scoped} reviews={reviews} locale={locale} />
             </>
           ) : [
               "Library",
@@ -1233,16 +1238,58 @@ export default function Room({
                     onChange={(e) => setQuery(e.target.value)}
                   />
                 </div>
-                {view === "Library" && (
+                {(view === "Library" || view === "Search") && (
                   <select
                     aria-label="Reading type"
                     value={kind}
                     onChange={(e) => setKind(e.target.value)}
                   >
-                    {["All reading", "Book", "Article"].map((v) => (
+                    {(view === "Search"
+                      ? [
+                          "All reading",
+                          "Book",
+                          "Article",
+                          "Chapter",
+                          "Note",
+                          "Vocabulary",
+                          "Quote",
+                          "Card",
+                          "Action",
+                          "Journal",
+                        ]
+                      : ["All reading", "Book", "Article"]
+                    ).map((v) => (
                       <option key={v}>{v}</option>
                     ))}
                   </select>
+                )}
+                {view === "Search" && (
+                  <>
+                    <input
+                      style={{ width: 150 }}
+                      type="date"
+                      aria-label="Added on or after"
+                      value={since}
+                      onChange={(e) => setSince(e.target.value)}
+                    />
+                    <select
+                      aria-label="Reading status"
+                      style={{ width: 150 }}
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                    >
+                      {[
+                        "All statuses",
+                        "Want to Read",
+                        "Reading",
+                        "Completed",
+                        "Paused",
+                        "Abandoned",
+                      ].map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </>
                 )}
                 <select
                   aria-label="Sort results"
@@ -1603,15 +1650,17 @@ export default function Room({
                     notes, and review history. Image references remain linked to
                     your private storage.
                   </p>
-                  <button
+                  <a
                     className="secondary"
-                    onClick={() => {
-                      if (guard()) window.location.assign("/api/backup");
+                    href="/api/backup"
+                    download
+                    onClick={(event) => {
+                      if (!guard()) event.preventDefault();
                     }}
                   >
                     <Download size={16} />
                     Download JSON backup
-                  </button>
+                  </a>
                   <label style={{ marginTop: 20 }}>
                     Restore a Reading Room 2.0 backup
                     <input

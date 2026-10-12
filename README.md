@@ -2,6 +2,10 @@
 
 A private language library for reading, reflection, and long-term memory. Warm editorial typography, book shelves, structured rich notes, vocabulary, real FSRS review, and practical learning actions.
 
+Live: https://reading-room-2-nine.vercel.app · Source: https://github.com/Rezquellah/reading-room/tree/codex/reading-room-2.0
+
+The separate Vercel project `reading-room-2` tracks `codex/reading-room-2.0` for production. Push tested commits to that branch to deploy updates. The original Reading Room deployment remains separate.
+
 ## Run on Windows
 
 Install Node.js 22+ and pnpm 11. In PowerShell:
@@ -21,7 +25,7 @@ Open http://localhost:3000. Create an account, confirm the email, then sign in. 
 - Supabase SSR cookie sessions, server-validated authentication, PostgreSQL, private Storage.
 - Tiptap 3 JSON documents with formatting, headings, tables, image uploads/resizing, checklists, document search, focus mode, and learning templates.
 - ts-fsrs 5 for scheduling, with serialized state and atomic review history writes.
-- Chromium/Puppeteer PDF rendering with embedded images, French characters, A4/Letter, page numbering, and ink-friendly output. Windows uses installed Microsoft Edge; override `CHROME_EXECUTABLE_PATH` if needed. Vercel uses bundled Linux Chromium.
+- Chromium/Puppeteer PDF rendering with embedded images, French characters, A4/Letter, page numbering, and ink-friendly output. Windows uses installed Google Chrome; override `CHROME_EXECUTABLE_PATH` if needed. Vercel uses bundled Linux Chromium.
 
 `workspaces` own language context. `entries` stores typed books, articles, chapters, notes, vocabulary, quotations, cards, journal entries, and actions. Composite foreign keys enforce owner/workspace relationships. Triggers enforce valid, acyclic source types. `review_logs` records recall events. `uploaded_assets` tracks private files. Flexible type-specific metadata lives in JSONB; relationships remain relational.
 
@@ -62,8 +66,8 @@ Commit SQL migrations with schema changes. Run checks before pushing. Configure 
 - English UI with French navigation/date formatting; comprehensive French translation remains unfinished.
 - Article metadata and vocabulary definitions are manual. No scraping or paywall bypass.
 - Chapter order is edited through its number; no drag-and-drop reorder yet.
-- No contextual selection bubble, slash commands, dedicated image caption fields, or related-note graph yet.
-- Search scans loaded owned content; dedicated server-side ranked full-text search and date filters remain future work.
-- Review counts/history are real; advanced retention charts, reading activity history, and goal analytics are not implemented yet.
+- Contextual selection formatting and recall-card creation are available; slash commands, dedicated image caption fields, and a related-note graph remain future work.
+- Search scans loaded owned content with workspace, type, status, and date filters; dedicated server-side ranked full-text search remains future work.
+- Weekly review activity and completion counts are real; advanced retention charts, reading activity history, and goal analytics are not implemented yet.
 - No automatic merge of concurrent edits. Recover a failed device draft and reconcile it with the saved version.
 - Live signup, recovery emails, storage isolation, and production PDF rendering must be checked against the deployed environment before calling the application production-verified.

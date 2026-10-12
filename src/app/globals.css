@@ -1722,3 +1722,63 @@ kbd {
     scroll-behavior: auto !important;
   }
 }
+.insights {
+  margin-top: 32px;
+}
+.insights-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 35px;
+}
+.activity-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 20px 0;
+}
+.activity-chart > div {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+}
+.activity-chart i {
+  display: block;
+  width: 75%;
+  background: #8fa184;
+  border-radius: 4px 4px 0 0;
+}
+.activity-chart span,
+.activity-chart small {
+  font-size: 9px;
+  color: var(--muted);
+}
+.insight-totals .mini-stat {
+  padding: 8px 0;
+}
+.selection-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.selection-toolbar button {
+  padding: 5px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.selection-toolbar button:hover {
+  background: var(--soft);
+}
+@media (max-width: 700px) {
+  .insights-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}

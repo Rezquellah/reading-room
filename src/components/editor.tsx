@@ -1,5 +1,6 @@
 "use client";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
@@ -385,6 +386,37 @@ export default function Editor({
           e.target.value = "";
         }}
       />
+      <BubbleMenu editor={editor}>
+        <div className="selection-toolbar">
+          <button onClick={() => editor.chain().focus().toggleBold().run()}>
+            Bold
+          </button>
+          <button onClick={() => editor.chain().focus().toggleItalic().run()}>
+            Italic
+          </button>
+          <button onClick={() => editor.chain().focus().toggleCode().run()}>
+            Code
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleHighlight().run()}
+          >
+            Highlight
+          </button>
+          <button
+            onClick={() =>
+              onCard(
+                editor.state.doc.textBetween(
+                  editor.state.selection.from,
+                  editor.state.selection.to,
+                  " ",
+                ),
+              )
+            }
+          >
+            Make recall card
+          </button>
+        </div>
+      </BubbleMenu>
       <EditorContent editor={editor} />
       <footer className="editor-footer">
         <span>
