@@ -68,16 +68,14 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   );
   await page.getByRole("button", { name: "Insert table", exact: true }).click();
   await expect(editor.locator("table")).toBeVisible();
-  await page
-    .locator(".editor input[type=file]")
-    .setInputFiles({
-      name: "note-image.png",
-      mimeType: "image/png",
-      buffer: Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
-        "base64",
-      ),
-    });
+  await page.locator(".editor input[type=file]").setInputFiles({
+    name: "note-image.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  });
   await expect(editor.locator("img")).toBeVisible();
   await page.getByRole("button", { name: "Save now", exact: true }).click();
   await expect(
@@ -206,7 +204,14 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "test-results/mobile.png", fullPage: true, animations: "disabled" });
+  await expect
+    .poll(async () => (await page.locator(".editor").boundingBox())!.width)
+    .toBeLessThanOrEqual(350);
+  await page.screenshot({
+    path: "test-results/mobile.png",
+    fullPage: true,
+    animations: "disabled",
+  });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
