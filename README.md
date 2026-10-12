@@ -70,4 +70,13 @@ Commit SQL migrations with schema changes. Run checks before pushing. Configure 
 - Search scans loaded owned content with workspace, type, status, and date filters; dedicated server-side ranked full-text search remains future work.
 - Weekly review activity and completion counts are real; advanced retention charts, reading activity history, and goal analytics are not implemented yet.
 - No automatic merge of concurrent edits. Recover a failed device draft and reconcile it with the saved version.
-- Live signup, recovery emails, storage isolation, and production PDF rendering must be checked against the deployed environment before calling the application production-verified.
+- Live password recovery and cross-user storage isolation still need verification against Supabase. The automated workflow uses simulated authentication; it is not a substitute for those checks.
+
+## Production verification — 12 October 2026
+
+- The user signed in on the production domain. Their existing English workspace, book, and rich-text note loaded from Supabase.
+- Exporting that note downloaded a two-page PDF from Vercel's Linux renderer. Text extraction and visual inspection confirmed the note, highlighting, table, and page numbers.
+- JSON backup downloaded successfully and contained one workspace and four entries. No restore was performed against the live account.
+- Supabase Site URL and all four production/localhost login and recovery callback URLs were confirmed in the dashboard.
+- Anonymous requests to data, backup, and PDF routes returned 401; private asset access returned 403.
+- Typecheck, lint (two image optimization warnings), 11 unit/database tests, the bilingual Playwright workflow, and production build passed. GitHub pushes deploy the separate 2.0 Vercel project.
