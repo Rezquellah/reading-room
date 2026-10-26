@@ -63,11 +63,59 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await expect(page.getByLabel("Study prompt")).toHaveValue(
     /reading-room-study-v1/,
   );
-  await expect(page.getByLabel("Study approach")).toHaveValue("english");
-  await expect(page.getByLabel("Study prompt")).toHaveValue(/English coach/);
-  await page.getByLabel("Study approach").selectOption("book");
-  await expect(page.getByLabel("Study prompt")).not.toHaveValue(/English coach/);
-  await page.getByLabel("Study approach").selectOption("english");
+  await expect(
+    page.getByRole("combobox", { name: /^Learning goal/ }),
+  ).toHaveValue("understand");
+  await expect(
+    page.getByLabel("Language coaching", { exact: true }),
+  ).toHaveValue("off");
+  await page
+    .getByRole("combobox", { name: /^Learning goal/ })
+    .selectOption("exam");
+  await page
+    .getByRole("combobox", { name: /^Topic familiarity/ })
+    .selectOption("Some knowledge");
+  await page
+    .getByRole("combobox", { name: /^Detail level/ })
+    .selectOption("In depth");
+  await page
+    .getByLabel("Language coaching", { exact: true })
+    .selectOption("on");
+  await page.getByLabel("Language to practise").fill("French");
+  await expect(page.getByLabel("Study prompt")).toHaveValue(
+    /language coach for "French"/,
+  );
+  await expect(page.getByLabel("Study prompt")).toHaveValue(
+    /exam format and syllabus/,
+  );
+  await page
+    .getByRole("button", { name: "Save preferences for this source" })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Study preferences saved",
+  );
+  await page.getByRole("button", { name: "Close study workflow" }).click();
+  await page.reload();
+  await page
+    .getByRole("heading", { name: "Deep Work — QA", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Chapters", exact: true }).click();
+  await page.getByText("Focus and attention", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Study with ChatGPT", exact: true })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: /^Learning goal/ }),
+  ).toHaveValue("exam");
+  await expect(
+    page.getByRole("combobox", { name: /^Detail level/ }),
+  ).toHaveValue("In depth");
+  await expect(page.getByLabel("Language to practise")).toHaveValue("French");
+  await page.getByRole("button", { name: "Help me choose" }).click();
+  await page.getByRole("button", { name: "Start with Understand" }).click();
+  await expect(
+    page.getByRole("combobox", { name: /^Learning goal/ }),
+  ).toHaveValue("understand");
   await page
     .getByRole("button", { name: "2. Save your learning", exact: true })
     .click();

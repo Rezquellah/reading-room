@@ -7,6 +7,9 @@ import {
   parseStudyPack,
   studyEntries,
   studyPrompt,
+  learningGoals,
+  studyPreferencesSchema,
+  type StudyPreferences,
   type StudyPack,
 } from "@/lib/study";
 
@@ -21,9 +24,26 @@ export default function StudyBridge({
 }) {
   const [open, setOpen] = useState(false),
     [step, setStep] = useState("prepare");
-  const [goal, setGoal] = useState(""),
-    [studyLanguage, setStudyLanguage] = useState(language);
-  const [englishCoaching, setEnglishCoaching] = useState(true);
+  const [preferences, setPreferences] = useState<StudyPreferences>(() => {
+    const saved = studyPreferencesSchema.safeParse(
+      source.data.study_preferences,
+    );
+    return saved.success
+      ? saved.data
+      : studyPreferencesSchema.parse({
+          explanationLanguage: language || "English",
+        });
+  });
+  const [showHelp, setShowHelp] = useState(false);
+  const [coachingEnabled, setCoachingEnabled] = useState(
+    Boolean(preferences.coachingLanguage),
+  );
+  function preference<K extends keyof StudyPreferences>(
+    key: K,
+    value: StudyPreferences[K],
+  ) {
+    setPreferences((current) => ({ ...current, [key]: value }));
+  }
   const [raw, setRaw] = useState(""),
     [mode, setMode] = useState("pack");
   const [pack, setPack] = useState<StudyPack | null>(null),
@@ -32,10 +52,42 @@ export default function StudyBridge({
     [message, setMessage] = useState("");
   const prompt = studyPrompt(
     source.title,
-    studyLanguage,
-    goal,
-    englishCoaching,
+    preferences.explanationLanguage,
+    preferences.context,
+    preferences,
   );
+  async function savePreferences() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const saved = studyPreferencesSchema.parse(preferences);
+      const response = await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          value: {
+            ...source,
+            data: { ...source.data, study_preferences: saved },
+          },
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Unable to save study preferences.");
+      await onImported();
+      setMessage(
+        "Study preferences saved for this source. You can change them for any session.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to save study preferences.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   const rows = pack
     ? [
         ...pack.notes.map((n, i) => ({
@@ -146,49 +198,161 @@ export default function StudyBridge({
             </button>
           </div>
           {step === "prepare" ? (
-            <div className="study-stack">
+            <fieldset
+              className="study-stack"
+              disabled={busy}
+              style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+            >
               <p>
-                Learn through practical lessons and real-life scenarios. Get
-                feedback on your answers before moving to the next section.
+                Choose what you want from this session. You can change your goal
+                whenever you study.
               </p>
               <label>
-                Study approach
+                Learning goal
                 <select
-                  value={englishCoaching ? "english" : "book"}
+                  aria-label="Learning goal"
+                  value={preferences.learningGoal}
                   onChange={(e) =>
-                    setEnglishCoaching(e.target.value === "english")
+                    preference(
+                      "learningGoal",
+                      e.target.value as StudyPreferences["learningGoal"],
+                    )
                   }
                 >
-                  <option value="english">
-                    Book lessons + English coaching
-                  </option>
-                  <option value="book">Book lessons only</option>
+                  {Object.entries(learningGoals).map(([key, value]) => (
+                    <option key={key} value={key}>
+                      {value.label}
+                    </option>
+                  ))}
                 </select>
               </label>
-              {englishCoaching && (
-                <p>
-                  Practice answering in English. Your tutor will explain your
-                  corrections, suggest a professional rewrite, and teach useful
-                  grammar and vocabulary alongside the book.
-                </p>
+              <p>{learningGoals[preferences.learningGoal].description}</p>
+              <button
+                type="button"
+                className="secondary"
+                aria-expanded={showHelp}
+                aria-controls={`study-help-${source.id}`}
+                onClick={() => setShowHelp(!showHelp)}
+              >
+                Help me choose
+              </button>
+              {showHelp && (
+                <div id={`study-help-${source.id}`}>
+                  <p>
+                    Not sure? Start with Understand. Choose Exam for assessment
+                    practice, Apply for decisions and action, or Explore for
+                    discussion and deeper questions.
+                  </p>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      preference("learningGoal", "understand");
+                      setShowHelp(false);
+                    }}
+                  >
+                    Start with Understand
+                  </button>
+                </div>
+              )}
+              <label>
+                Topic familiarity
+                <select
+                  aria-label="Topic familiarity"
+                  value={preferences.familiarity}
+                  onChange={(e) =>
+                    preference(
+                      "familiarity",
+                      e.target.value as StudyPreferences["familiarity"],
+                    )
+                  }
+                >
+                  {(["Beginner", "Some knowledge", "Advanced"] as const).map(
+                    (value) => (
+                      <option key={value}>{value}</option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label>
+                Detail level
+                <select
+                  aria-label="Detail level"
+                  value={preferences.depth}
+                  onChange={(e) =>
+                    preference(
+                      "depth",
+                      e.target.value as StudyPreferences["depth"],
+                    )
+                  }
+                >
+                  {(["Essentials", "Balanced", "In depth"] as const).map(
+                    (value) => (
+                      <option key={value}>{value}</option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label>
+                Language coaching
+                <select
+                  aria-label="Language coaching"
+                  value={coachingEnabled ? "on" : "off"}
+                  onChange={(e) => {
+                    setCoachingEnabled(e.target.value === "on");
+                    preference(
+                      "coachingLanguage",
+                      e.target.value === "on" ? "English" : "",
+                    );
+                  }}
+                >
+                  <option value="off">Off — focus on the subject</option>
+                  <option value="on">On — practise a language too</option>
+                </select>
+              </label>
+              {coachingEnabled && (
+                <label>
+                  Language to practise
+                  <input
+                    value={preferences.coachingLanguage}
+                    onChange={(e) =>
+                      preference("coachingLanguage", e.target.value)
+                    }
+                    maxLength={100}
+                  />
+                </label>
               )}
               <label>
                 Explanation language
                 <input
-                  value={studyLanguage}
-                  onChange={(e) => setStudyLanguage(e.target.value)}
+                  value={preferences.explanationLanguage}
+                  onChange={(e) =>
+                    preference("explanationLanguage", e.target.value)
+                  }
                   maxLength={100}
                 />
               </label>
               <label>
-                What do you want to understand?
+                Personal context (optional)
                 <input
-                  value={goal}
-                  onChange={(e) => setGoal(e.target.value)}
-                  placeholder="For example: apply the chapter's ideas at work"
+                  value={preferences.context}
+                  onChange={(e) => preference("context", e.target.value)}
+                  placeholder="For example: I work in sales, or my exam covers chapters 1–4"
                   maxLength={1000}
                 />
               </label>
+              <button
+                type="button"
+                className="secondary"
+                disabled={
+                  busy ||
+                  !preferences.explanationLanguage.trim() ||
+                  (coachingEnabled && !preferences.coachingLanguage.trim())
+                }
+                onClick={() => void savePreferences()}
+              >
+                {busy ? "Saving…" : "Save preferences for this source"}
+              </button>
               <label>
                 Study prompt
                 <textarea rows={9} readOnly value={prompt} />
@@ -196,6 +360,10 @@ export default function StudyBridge({
               <div className="row wrap">
                 <button
                   className="primary"
+                  disabled={
+                    !preferences.explanationLanguage.trim() ||
+                    (coachingEnabled && !preferences.coachingLanguage.trim())
+                  }
                   onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(prompt);
@@ -223,7 +391,7 @@ export default function StudyBridge({
                 ask: <strong>Export to Reading Room</strong>. Copy its JSON
                 response and return to step 2.
               </p>
-            </div>
+            </fieldset>
           ) : (
             <div className="study-stack">
               <label>
