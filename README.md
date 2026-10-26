@@ -57,7 +57,7 @@ Unit tests cover progress, Unicode indexing, input validation, and FSRS date ser
 
 ## Studying with ChatGPT Plus
 
-Open a book, article, or chapter and select **Study with ChatGPT**. In **Prepare study session**, choose the explanation language and goal, copy the prompt, and open ChatGPT Study mode. Paste the prompt and upload your ebook or chapter directly in ChatGPT. Reading Room does not send requests to OpenAI or require an API key.
+Open a book, article, or chapter and select **Study with ChatGPT**. The default **Book lessons + English coaching** approach combines detailed explanations and practical scenarios with feedback on understanding, corrected answers, professional rewrites, grammar, and vocabulary. Choose **Book lessons only** to focus on the content. Select your explanation language and goal, then copy the prompt into your existing ChatGPT conversation to continue the current lesson, or start a new chat and upload your ebook there. Reading Room does not send requests to OpenAI or require an API key.
 
 After studying, ask ChatGPT **Export to Reading Room**. Copy its JSON response (or save it as a `.json` file). Back in **Save your learning**, paste or upload it, select **Preview import**, review the entries, and save the selected items. Notes, vocabulary, and recall cards are linked to the source and its workspace. Cards begin as new cards; FSRS scheduling starts when you grade a review. Ordinary text can also be saved using **Plain notes**.
 

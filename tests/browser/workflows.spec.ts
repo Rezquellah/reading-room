@@ -63,6 +63,11 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await expect(page.getByLabel("Study prompt")).toHaveValue(
     /reading-room-study-v1/,
   );
+  await expect(page.getByLabel("Study approach")).toHaveValue("english");
+  await expect(page.getByLabel("Study prompt")).toHaveValue(/English coach/);
+  await page.getByLabel("Study approach").selectOption("book");
+  await expect(page.getByLabel("Study prompt")).not.toHaveValue(/English coach/);
+  await page.getByLabel("Study approach").selectOption("english");
   await page
     .getByRole("button", { name: "2. Save your learning", exact: true })
     .click();

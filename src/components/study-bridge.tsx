@@ -23,13 +23,19 @@ export default function StudyBridge({
     [step, setStep] = useState("prepare");
   const [goal, setGoal] = useState(""),
     [studyLanguage, setStudyLanguage] = useState(language);
+  const [englishCoaching, setEnglishCoaching] = useState(true);
   const [raw, setRaw] = useState(""),
     [mode, setMode] = useState("pack");
   const [pack, setPack] = useState<StudyPack | null>(null),
     [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
-  const prompt = studyPrompt(source.title, studyLanguage, goal);
+  const prompt = studyPrompt(
+    source.title,
+    studyLanguage,
+    goal,
+    englishCoaching,
+  );
   const rows = pack
     ? [
         ...pack.notes.map((n, i) => ({
@@ -141,6 +147,31 @@ export default function StudyBridge({
           </div>
           {step === "prepare" ? (
             <div className="study-stack">
+              <p>
+                Learn through practical lessons and real-life scenarios. Get
+                feedback on your answers before moving to the next section.
+              </p>
+              <label>
+                Study approach
+                <select
+                  value={englishCoaching ? "english" : "book"}
+                  onChange={(e) =>
+                    setEnglishCoaching(e.target.value === "english")
+                  }
+                >
+                  <option value="english">
+                    Book lessons + English coaching
+                  </option>
+                  <option value="book">Book lessons only</option>
+                </select>
+              </label>
+              {englishCoaching && (
+                <p>
+                  Practice answering in English. Your tutor will explain your
+                  corrections, suggest a professional rewrite, and teach useful
+                  grammar and vocabulary alongside the book.
+                </p>
+              )}
               <label>
                 Explanation language
                 <input
@@ -186,10 +217,11 @@ export default function StudyBridge({
                 </a>
               </div>
               <p>
-                Paste the prompt into ChatGPT and upload your ebook or chapter
-                there. Nothing is sent automatically. When you finish, ask:{" "}
-                <strong>Export to Reading Room</strong>. Copy its JSON response
-                and return to step 2.
+                Paste the prompt into your existing ChatGPT conversation to
+                continue where you left off, or start a new chat and upload your
+                ebook there. Nothing is sent automatically. When you finish,
+                ask: <strong>Export to Reading Room</strong>. Copy its JSON
+                response and return to step 2.
               </p>
             </div>
           ) : (
