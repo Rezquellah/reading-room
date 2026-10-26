@@ -61,7 +61,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     .getByRole("button", { name: "Study with ChatGPT", exact: true })
     .click();
   await expect(page.getByLabel("Study prompt")).toHaveValue(
-    /reading-room-study-v1/,
+    /Markdown \(\.md\)/,
   );
   await expect(
     page.getByRole("combobox", { name: /^Learning goal/ }),
@@ -119,6 +119,78 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await page
     .getByRole("button", { name: "2. Save your learning", exact: true })
     .click();
+  await expect(
+    page.getByRole("combobox", { name: /^Import format/ }),
+  ).toHaveValue("markdown");
+  const markdownLesson =
+    "# Markdown lesson\n\n## Key idea\n\n**Active recall** helps learning.\n\n> A useful takeaway.\n\n| Original | Improved |\n| --- | --- |\n| I learns | I learn |\n\n![Learning diagram](images/learning.png)";
+  await page.getByLabel("Or choose a Markdown (.md) file").setInputFiles({
+    name: "lesson.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from(markdownLesson),
+  });
+  await page
+    .getByRole("button", { name: "Preview import", exact: true })
+    .click();
+  const lessonPreview = page.getByLabel("Markdown lesson preview");
+  await expect(lessonPreview.locator("h1")).toHaveText("Markdown lesson");
+  await expect(lessonPreview.locator("table")).toContainText("I learn");
+  await page.getByLabel(/Picture: Learning diagram/).setInputFiles({
+    name: "diagram.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  });
+  await expect(lessonPreview.locator("img")).toHaveAttribute(
+    "src",
+    /\/api\/assets\?path=/,
+  );
+  await page.screenshot({
+    path: "test-results/markdown-preview.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Save 1 selected items", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Saved 1 items");
+  await page
+    .getByRole("button", { name: "Save 1 selected items", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Saved 0 items. Skipped 1",
+  );
+  const markdownState = await (await page.request.get("/api/data")).json();
+  const savedLesson = markdownState.entries.find(
+    (entry: { title: string }) => entry.title === "Markdown lesson",
+  );
+  expect(JSON.stringify(savedLesson.data.content)).toContain('"type":"table"');
+  expect(JSON.stringify(savedLesson.data.content)).toContain(
+    "/api/assets?path=",
+  );
+  await page.getByRole("button", { name: "Close study workflow" }).click();
+  await page.getByRole("button", { name: "Search ⌘ K" }).click();
+  await page.getByLabel("Search content").fill("Markdown lesson");
+  await page.getByRole("button", { name: /Markdown lesson/ }).click();
+  await expect(page.locator(".tiptap table")).toContainText("I learn");
+  await expect(page.locator(".tiptap img")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/markdown-note.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Back to source", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Study with ChatGPT", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "2. Save your learning", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: /^Import format/ })
+    .selectOption("pack");
   await page.getByLabel("Paste the study pack").fill(
     JSON.stringify({
       format: "reading-room-study-v1",

@@ -7,6 +7,30 @@
   display: grid;
   gap: 16px;
 }
+.markdown-preview {
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  background: var(--paper);
+  overflow-wrap: anywhere;
+}
+.markdown-preview .document {
+  min-height: 0;
+  padding: 0;
+}
+.markdown-preview table {
+  width: 100%;
+  table-layout: fixed;
+}
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+}
+.markdown-preview pre {
+  white-space: pre-wrap;
+}
 .study-stack p,
 .study-message {
   font-size: 13px;

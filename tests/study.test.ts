@@ -1,10 +1,65 @@
 import { describe, expect, it } from "vitest";
-import { parseStudyPack, studyEntries, studyPrompt } from "../src/lib/study";
+import {
+  parseStudyPack,
+  parseMarkdownStudy,
+  studyEntries,
+  studyPrompt,
+} from "../src/lib/study";
+import { markdownDocument } from "../src/lib/markdown";
+import { getSchema } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import { TableKit } from "@tiptap/extension-table";
 const source = {
   id: "11111111-1111-4111-8111-111111111111",
   workspace_id: "22222222-2222-4222-8222-222222222222",
 };
 describe("study handoff", () => {
+  it("imports Markdown as valid editable rich content with safe image placeholders", async () => {
+    const md =
+      "# Écouter\n\n## Main idea\n\n**Bold** and *emphasis* with [source](https://example.org).\n\n> Remember this.\n\n3. First\n   - Nested\n4. Second\n\n- [x] Done\n\n| Original | Improved |\n| --- | --- |\n| words | **better** |\n\nBefore ![Diagram](images/diagram.png) after.\n\n```js\nconst x = 1;\n```";
+    const pack = parseMarkdownStudy("```markdown\n" + md + "\n```", "Fallback");
+    expect(pack.notes[0].title).toBe("Écouter");
+    const preview = markdownDocument(md);
+    expect(preview.images).toEqual([
+      { reference: "images/diagram.png", label: "Diagram" },
+    ]);
+    expect(JSON.stringify(preview.content)).toContain("add picture");
+    const pictures = { "images/diagram.png": "/api/assets?path=owned%2Fimage" };
+    const entries = await studyEntries(pack, source, pictures);
+    if (!("content" in entries[0].data)) throw new Error("Expected a note");
+    const schema = getSchema([StarterKit, Image, TableKit]);
+    schema.nodeFromJSON(entries[0].data.content).check();
+    const serialized = JSON.stringify(entries[0].data.content);
+    for (const type of [
+      "heading",
+      "bold",
+      "italic",
+      "blockquote",
+      "orderedList",
+      "bulletList",
+      "table",
+      "codeBlock",
+      "image",
+    ])
+      expect(serialized).toContain(`"type":"${type}"`);
+    expect(await studyEntries(pack, source, pictures)).toEqual(entries);
+  });
+  it("never executes Markdown HTML or embeds untrusted image and link URLs", () => {
+    const result = markdownDocument(
+      "<script>alert(1)</script>\n\n[bad](javascript:alert%281%29) ![remote](https://example.org/tracker.png)",
+    );
+    const serialized = JSON.stringify(result.content);
+    expect(serialized).not.toContain('"type":"image"');
+    expect(serialized).not.toContain('"type":"link"');
+    expect(serialized).toContain("<script>");
+    expect(() => parseMarkdownStudy(" ", "Empty")).toThrow();
+    expect(() => parseMarkdownStudy("x".repeat(50001), "Large")).toThrow();
+    expect(studyPrompt("Book", "English", "")).toContain("Markdown (.md)");
+    expect(studyPrompt("Book", "English", "")).not.toContain(
+      "reading-room-study-v1",
+    );
+  });
   it("accepts fenced JSON and preserves French text", () => {
     const p = parseStudyPack(
       "```json\n" +

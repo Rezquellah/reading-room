@@ -1,10 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import MarkdownPreview from "./markdown-preview";
+import { markdownDocument } from "@/lib/markdown";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, GraduationCap } from "lucide-react";
 import type { Entry } from "@/lib/model";
 import {
   parseStudyPack,
+  parseMarkdownStudy,
   studyEntries,
   studyPrompt,
   learningGoals,
@@ -45,11 +48,44 @@ export default function StudyBridge({
     setPreferences((current) => ({ ...current, [key]: value }));
   }
   const [raw, setRaw] = useState(""),
-    [mode, setMode] = useState("pack");
+    [mode, setMode] = useState("markdown");
+  const [images, setImages] = useState<Record<string, string>>({});
   const [pack, setPack] = useState<StudyPack | null>(null),
     [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
+  const markdownPreview = useMemo(() => {
+    const note = pack?.notes[0];
+    return mode === "markdown" && note
+      ? markdownDocument(note.text, images)
+      : null;
+  }, [pack, mode, images]);
+  async function uploadPicture(reference: string, file: File) {
+    setBusy(true);
+    setMessage("");
+    try {
+      if (file.size > 5 * 1024 * 1024)
+        throw new Error("Choose an image under 5 MB.");
+      const data = new FormData();
+      data.set("file", file);
+      const response = await fetch("/api/assets", {
+        method: "POST",
+        body: data,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Image upload failed.");
+      setImages((current) => ({ ...current, [reference]: result.url }));
+      setMessage(
+        "Picture added to the preview. Save the lesson to keep it in your notes.",
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Image upload failed.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   const prompt = studyPrompt(
     source.title,
     preferences.explanationLanguage,
@@ -123,7 +159,7 @@ export default function StudyBridge({
         ),
         cards: pack.cards.filter((_, i) => selected.includes(`cards:${i}`)),
       };
-      const entries = await studyEntries(chosen, source);
+      const entries = await studyEntries(chosen, source, images);
       const response = await fetch("/api/backup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -388,8 +424,8 @@ export default function StudyBridge({
                 Paste the prompt into your existing ChatGPT conversation to
                 continue where you left off, or start a new chat and upload your
                 ebook there. Nothing is sent automatically. When you finish,
-                ask: <strong>Export to Reading Room</strong>. Copy its JSON
-                response and return to step 2.
+                ask: <strong>Export to Reading Room</strong>. Download its .md
+                file or copy the Markdown, then return to step 2.
               </p>
             </fieldset>
           ) : (
@@ -402,15 +438,21 @@ export default function StudyBridge({
                   onChange={(e) => {
                     setMode(e.target.value);
                     setPack(null);
+                    setImages({});
                     setMessage("");
                   }}
                 >
-                  <option value="pack">ChatGPT study pack (JSON)</option>
+                  <option value="markdown">Markdown lesson (.md)</option>
+                  <option value="pack">Legacy study pack (JSON)</option>
                   <option value="plain">Plain notes</option>
                 </select>
               </label>
               <label>
-                {mode === "pack" ? "Paste the study pack" : "Paste your notes"}
+                {mode === "markdown"
+                  ? "Paste your Markdown lesson"
+                  : mode === "pack"
+                    ? "Paste the study pack"
+                    : "Paste your notes"}
                 <textarea
                   rows={7}
                   value={raw}
@@ -424,23 +466,33 @@ export default function StudyBridge({
                 />
               </label>
               <p>
-                Up to 500 KB per study pack and 50,000 characters per note.
-                Review explanations against your book before saving.
+                Up to 50,000 characters per lesson. Markdown keeps headings,
+                lists, tables, and emphasis. Vocabulary and exercises stay in
+                the lesson; you can create recall cards from your saved note.
               </p>
               <label>
-                Or choose a {mode === "pack" ? "JSON" : "text"} file
+                Or choose a{" "}
+                {mode === "markdown"
+                  ? "Markdown (.md)"
+                  : mode === "pack"
+                    ? "JSON"
+                    : "text"}{" "}
+                file
                 <input
                   type="file"
                   accept={
-                    mode === "pack"
-                      ? ".json,application/json"
-                      : ".txt,.md,text/plain"
+                    mode === "markdown"
+                      ? ".md,.markdown,text/markdown,text/plain"
+                      : mode === "pack"
+                        ? ".json,application/json"
+                        : ".txt,.md,text/plain"
                   }
                   disabled={busy}
                   onChange={async (e) => {
                     const f = e.target.files?.[0];
                     if (!f) return;
                     setPack(null);
+                    setImages({});
                     if (f.size > 500000) {
                       setMessage("Choose a file under 500 KB.");
                       return;
@@ -457,22 +509,28 @@ export default function StudyBridge({
                 onClick={() => {
                   try {
                     const parsed =
-                      mode === "pack"
-                        ? parseStudyPack(raw)
-                        : parseStudyPack(
-                            JSON.stringify({
-                              format: "reading-room-study-v1",
-                              notes: [
-                                {
-                                  title: `Study notes — ${source.title}`.slice(
-                                    0,
-                                    500,
-                                  ),
-                                  text: raw,
-                                },
-                              ],
-                            }),
-                          );
+                      mode === "markdown"
+                        ? parseMarkdownStudy(
+                            raw,
+                            `Study notes — ${source.title}`,
+                          )
+                        : mode === "pack"
+                          ? parseStudyPack(raw)
+                          : parseStudyPack(
+                              JSON.stringify({
+                                format: "reading-room-study-v1",
+                                notes: [
+                                  {
+                                    title:
+                                      `Study notes — ${source.title}`.slice(
+                                        0,
+                                        500,
+                                      ),
+                                    text: raw,
+                                  },
+                                ],
+                              }),
+                            );
                     setPack(parsed);
                     setSelected([
                       ...parsed.notes.map((_, i) => `notes:${i}`),
@@ -491,9 +549,38 @@ export default function StudyBridge({
                 <>
                   <p>
                     <strong>Destination: {source.title}</strong>. Select what to
-                    keep. Existing items are never overwritten. Imported cards
-                    start as new, with no invented review history.
+                    keep. Existing items are never overwritten.
                   </p>
+                  {markdownPreview && (
+                    <>
+                      <p>
+                        Pictures are uploaded separately. Missing pictures stay
+                        as descriptive placeholders; remote image links are not
+                        fetched. You can also add pictures later in the note
+                        editor.
+                      </p>
+                      {markdownPreview.images.map((picture) => (
+                        <label key={picture.reference}>
+                          Picture: {picture.label} ({picture.reference})
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/gif"
+                            disabled={busy}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file)
+                                void uploadPicture(picture.reference, file);
+                              e.target.value = "";
+                            }}
+                          />
+                          {images[picture.reference] && (
+                            <small>Picture attached</small>
+                          )}
+                        </label>
+                      ))}
+                      <MarkdownPreview content={markdownPreview.content} />
+                    </>
+                  )}
                   <div className="study-preview">
                     {rows.map((r) => (
                       <label className="study-preview-row" key={r.key}>
@@ -512,7 +599,7 @@ export default function StudyBridge({
                         <span>
                           <small>{r.label}</small>
                           <strong>{r.title}</strong>
-                          <span>{r.detail}</span>
+                          {!markdownPreview && <span>{r.detail}</span>}
                         </span>
                       </label>
                     ))}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Entry } from "./model";
+import { cleanMarkdown, markdownDocument } from "./markdown";
 
 const short = z.string().trim().min(1).max(500);
 const body = z.string().trim().min(1).max(50000);
@@ -7,7 +8,13 @@ export const studySchema = z
   .object({
     format: z.literal("reading-room-study-v1"),
     notes: z
-      .array(z.object({ title: short, text: body }))
+      .array(
+        z.object({
+          title: short,
+          text: body,
+          markdown: z.boolean().optional(),
+        }),
+      )
       .max(30)
       .default([]),
     vocabulary: z
@@ -30,6 +37,19 @@ export const studySchema = z
     "Include at least one note, word, or recall card.",
   );
 export type StudyPack = z.infer<typeof studySchema>;
+export function parseMarkdownStudy(
+  raw: string,
+  fallbackTitle: string,
+): StudyPack {
+  const text = cleanMarkdown(raw);
+  const { title } = markdownDocument(text);
+  return studySchema.parse({
+    format: "reading-room-study-v1",
+    notes: [
+      { title: title || fallbackTitle.slice(0, 500), text, markdown: true },
+    ],
+  });
+}
 export function parseStudyPack(raw: string): StudyPack {
   if (raw.length > 500000)
     throw new Error("Choose study material under 500 KB.");
@@ -41,7 +61,7 @@ export function parseStudyPack(raw: string): StudyPack {
     return studySchema.parse(JSON.parse(cleaned));
   } catch {
     throw new Error(
-      "This is not a valid Reading Room study pack. Ask ChatGPT for the JSON format in the study prompt, or choose Plain notes.",
+      "This is not a valid legacy JSON study pack. For new lessons, choose Markdown and paste or upload your .md file.",
     );
   }
 }
@@ -124,26 +144,31 @@ If useful, give informal scores for this answer's comprehension, grammar, and vo
 Address misunderstandings before advancing. If I say I do not understand, explain differently with a simpler example. Once I am ready, connect to the next lesson and end with one question suited to my learning goal. Keep the pace conversational and adapt the amount of feedback to my needs.
 
 SAVE OUR LEARNING
-Keep teaching normally until I explicitly say "Export to Reading Room". Only then return one JSON code block in exactly this format, with no extra keys. All values must be plain text, not HTML. Include only material we actually studied. Preserve detailed lesson explanations, examples, source references, my original answers, feedback${englishCoaching ? ", corrected and professional versions, correction explanations and grammar points" : ""} in the note text, rather than reducing everything to a short summary. Include useful vocabulary and a few relevant recall/application cards. Use empty arrays for unused categories. Maximum: 30 notes, 100 vocabulary items, 100 cards; titles/questions/words 500 characters, note text/definitions/answers 50,000 characters, vocabulary examples 5,000 characters; entire pack under 500 KB. If needed, export a clearly identified smaller set of lessons and tell me what remains before producing the pack.
-{"format":"reading-room-study-v1","notes":[{"title":"Section title","text":"Detailed lesson, source references, my answer and coaching feedback"}],"vocabulary":[{"word":"Expression","definition":"Meaning","example":"Example sentence"}],"cards":[{"question":"Recall or application question","answer":"Concise answer"}]}
-Do not include review dates or mastery scores. Reading Room will schedule cards after I review them.`;
+Keep teaching normally until I explicitly say "Export to Reading Room". Then export the lesson as a Markdown (.md) file, not JSON. If you cannot attach a file, provide its complete Markdown content in one fenced markdown block for me to copy.
+Begin with a # lesson title and use ## and ### headings, bold key terms, lists, blockquotes for takeaways, and Markdown tables for comparisons or corrections. Use only sections relevant to our session; ordinary Markdown is supported and no rigid template is required. Do not use raw HTML, embedded scripts, or custom layout syntax.
+Include only material we actually studied. Preserve the full explanations, examples, source references, my original answers, feedback${englishCoaching ? ", corrected and professional versions, correction explanations and grammar points" : ""}. Do not shorten the lesson into a summary. Include vocabulary and practice questions with answers as sections in the document when relevant. These remain part of the saved note; they do not automatically become separate flashcards.
+For each picture, include a descriptive Markdown image reference such as ![Description](images/diagram.png). Provide downloadable image files separately when available, or clearly say the image must be supplied. Never invent an image or claim that a .md file embeds the image bytes. I will attach the pictures in Reading Room. Prefer blockquotes and tables to explain ideas when no image is available.
+Keep each .md lesson under 50,000 characters. If the session is longer, split it into separate clearly named lesson files without dropping content. Do not invent review dates or mastery scores.`;
 }
 export async function studyEntries(
   pack: StudyPack,
   source: Pick<Entry, "id" | "workspace_id">,
+  images: Record<string, string> = {},
 ) {
   const values = [
     ...pack.notes.map((n) => ({
       kind: "note" as const,
       title: n.title,
       data: {
-        content: {
-          type: "doc",
-          content: n.text.split(/\n\s*\n/).map((p) => ({
-            type: "paragraph",
-            content: [{ type: "text", text: p }],
-          })),
-        },
+        content: n.markdown
+          ? markdownDocument(n.text, images).content
+          : {
+              type: "doc",
+              content: n.text.split(/\n\s*\n/).map((p) => ({
+                type: "paragraph",
+                content: [{ type: "text", text: p }],
+              })),
+            },
         plain_text: n.text,
       },
     })),
