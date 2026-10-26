@@ -15,6 +15,33 @@ const source = {
   workspace_id: "22222222-2222-4222-8222-222222222222",
 };
 describe("study handoff", () => {
+  it("extracts study tables while preserving the full Markdown and deduplicating rows", async () => {
+    const md =
+      "# Lesson\n\n## Vocabulary\n| Word | Definition | Example |\n| --- | --- | --- |\n| **rappel** | Recall | Le rappel actif. |\n| **rappel** | Recall | Le rappel actif. |\n| incomplete | | |\n\n## Review cards\n| Question | Answer |\n| --- | --- |\n| What helps? | **Practice** and reflection. |\n| Unanswered? | |\n\n## Comparison\n| Original | Improved |\n| --- | --- |\n| I learns | I learn |";
+    const pack = parseMarkdownStudy(md, "Fallback");
+    expect(pack.notes[0].text).toBe(md);
+    expect(pack.vocabulary).toEqual([
+      { word: "rappel", definition: "Recall", example: "Le rappel actif." },
+    ]);
+    expect(pack.cards).toEqual([
+      { question: "What helps?", answer: "Practice and reflection." },
+    ]);
+    const entries = await studyEntries(pack, source);
+    expect(entries.map((entry) => entry.kind)).toEqual([
+      "note",
+      "vocabulary",
+      "card",
+    ]);
+    expect(await studyEntries(pack, source)).toEqual(entries);
+  });
+  it("recognizes French headers and explicit review Q/A pairs without inventing missing answers", () => {
+    const pack = parseMarkdownStudy(
+      "# Leçon\n\n| Mot | Définition | Exemple |\n| --- | --- | --- |\n| idée | Une pensée | Une bonne idée. |\n\n## Review\n**Q:** Why?\n\n**A:** Because.\n\nQ: Unanswered?\n\n## Other\nA: Not its answer.\n\n```md\n| Question | Answer |\n| --- | --- |\n| Fake | Fake |\n```",
+      "Lesson",
+    );
+    expect(pack.vocabulary[0].word).toBe("idée");
+    expect(pack.cards).toEqual([{ question: "Why?", answer: "Because." }]);
+  });
   it("imports Markdown as valid editable rich content with safe image placeholders", async () => {
     const md =
       "# Écouter\n\n## Main idea\n\n**Bold** and *emphasis* with [source](https://example.org).\n\n> Remember this.\n\n3. First\n   - Nested\n4. Second\n\n- [x] Done\n\n| Original | Improved |\n| --- | --- |\n| words | **better** |\n\nBefore ![Diagram](images/diagram.png) after.\n\n```js\nconst x = 1;\n```";

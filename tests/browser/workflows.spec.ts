@@ -123,7 +123,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     page.getByRole("combobox", { name: /^Import format/ }),
   ).toHaveValue("markdown");
   const markdownLesson =
-    "# Markdown lesson\n\n## Key idea\n\n**Active recall** helps learning.\n\n> A useful takeaway.\n\n| Original | Improved |\n| --- | --- |\n| I learns | I learn |\n\n![Learning diagram](images/learning.png)";
+    "# Markdown lesson\n\n## Key idea\n\n**Active recall** helps learning.\n\n> A useful takeaway.\n\n| Original | Improved |\n| --- | --- |\n| I learns | I learn |\n\n![Learning diagram](images/learning.png)\n\n## Vocabulary\n| Word | Definition | Example |\n| --- | --- | --- |\n| retrieval | Bringing information to mind | Practise retrieval. |\n\n## Review cards\n| Question | Answer |\n| --- | --- |\n| How do we practise retrieval? | Recall without looking. |";
   await page.getByLabel("Or choose a Markdown (.md) file").setInputFiles({
     name: "lesson.md",
     mimeType: "text/markdown",
@@ -134,7 +134,12 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     .click();
   const lessonPreview = page.getByLabel("Markdown lesson preview");
   await expect(lessonPreview.locator("h1")).toHaveText("Markdown lesson");
-  await expect(lessonPreview.locator("table")).toContainText("I learn");
+  await expect(lessonPreview.locator("table").first()).toContainText("I learn");
+  await expect(
+    page.getByText(
+      "Found 1 note(s), 1 vocabulary item(s), and 1 review card(s).",
+    ),
+  ).toBeVisible();
   await page.getByLabel(/Picture: Learning diagram/).setInputFiles({
     name: "diagram.png",
     mimeType: "image/png",
@@ -152,14 +157,14 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Save 1 selected items", exact: true })
+    .getByRole("button", { name: "Save 3 selected items", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Saved 1 items");
+  await expect(page.getByRole("status")).toContainText("Saved 3 items");
   await page
-    .getByRole("button", { name: "Save 1 selected items", exact: true })
+    .getByRole("button", { name: "Save 3 selected items", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText(
-    "Saved 0 items. Skipped 1",
+    "Saved 0 items. Skipped 3",
   );
   const markdownState = await (await page.request.get("/api/data")).json();
   const savedLesson = markdownState.entries.find(
@@ -173,7 +178,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await page.getByRole("button", { name: "Search ⌘ K" }).click();
   await page.getByLabel("Search content").fill("Markdown lesson");
   await page.getByRole("button", { name: /Markdown lesson/ }).click();
-  await expect(page.locator(".tiptap table")).toContainText("I learn");
+  await expect(page.locator(".tiptap table").first()).toContainText("I learn");
   await expect(page.locator(".tiptap img")).toBeVisible();
   await page.screenshot({
     path: "test-results/markdown-note.png",
@@ -297,9 +302,9 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     .getByRole("button", { name: /^Review/ })
     .first()
     .click();
-  await page.getByRole("button", { name: /Review 2 due cards/ }).click();
+  await page.getByRole("button", { name: /Review 3 due cards/ }).click();
   const reviewedAnswers: string[] = [];
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     await expect(page.locator(".answer")).toHaveCount(0);
     await page
       .getByRole("button", { name: "Reveal answer", exact: true })
@@ -310,6 +315,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   expect(reviewedAnswers.sort()).toEqual(
     [
       "Active recall.",
+      "Recall without looking.",
       "Undivided attention and an intentional practice.",
     ].sort(),
   );
@@ -317,6 +323,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     page.getByText("A little more connected.", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
+  await expect(page.getByText("retrieval", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add word", exact: true }).click();
   await page.getByLabel("Word or expression").fill("serendipity");
   await page
@@ -354,7 +361,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     page.getByRole("status").filter({ hasText: "Saved" }),
   ).toBeVisible();
   const state = await (await page.request.get("/api/data")).json();
-  expect(state.reviews).toHaveLength(2);
+  expect(state.reviews).toHaveLength(3);
   const note = state.entries.find(
     (e: { title: string }) => e.title === "Réflexions françaises",
   );

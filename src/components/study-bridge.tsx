@@ -467,8 +467,9 @@ export default function StudyBridge({
               </label>
               <p>
                 Up to 50,000 characters per lesson. Markdown keeps headings,
-                lists, tables, and emphasis. Vocabulary and exercises stay in
-                the lesson; you can create recall cards from your saved note.
+                lists, tables, and emphasis. Tables with Word / Definition /
+                Example and Question / Answer columns also populate Vocabulary
+                and Review. Use the updated study prompt for this format.
               </p>
               <label>
                 Or choose a{" "}
@@ -551,6 +552,20 @@ export default function StudyBridge({
                     <strong>Destination: {source.title}</strong>. Select what to
                     keep. Existing items are never overwritten.
                   </p>
+                  <p>
+                    Found {pack.notes.length} note(s), {pack.vocabulary.length}{" "}
+                    vocabulary item(s), and {pack.cards.length} review card(s).
+                  </p>
+                  {markdownPreview &&
+                    (!pack.vocabulary.length || !pack.cards.length) && (
+                      <p>
+                        Missing vocabulary or cards? Ask ChatGPT to include a
+                        Vocabulary table with Word, Definition, Example columns
+                        and a Review cards table with Question, Answer columns.
+                        Only complete entries are extracted; the full lesson is
+                        still preserved.
+                      </p>
+                    )}
                   {markdownPreview && (
                     <>
                       <p>
@@ -599,7 +614,9 @@ export default function StudyBridge({
                         <span>
                           <small>{r.label}</small>
                           <strong>{r.title}</strong>
-                          {!markdownPreview && <span>{r.detail}</span>}
+                          {(!markdownPreview || r.label !== "Note") && (
+                            <span>{r.detail}</span>
+                          )}
                         </span>
                       </label>
                     ))}

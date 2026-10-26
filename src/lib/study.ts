@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Entry } from "./model";
 import { cleanMarkdown, markdownDocument } from "./markdown";
+import { extractStudyItems } from "./study-extraction";
 
 const short = z.string().trim().min(1).max(500);
 const body = z.string().trim().min(1).max(50000);
@@ -45,6 +46,7 @@ export function parseMarkdownStudy(
   const { title } = markdownDocument(text);
   return studySchema.parse({
     format: "reading-room-study-v1",
+    ...extractStudyItems(text),
     notes: [
       { title: title || fallbackTitle.slice(0, 500), text, markdown: true },
     ],
@@ -146,7 +148,16 @@ Address misunderstandings before advancing. If I say I do not understand, explai
 SAVE OUR LEARNING
 Keep teaching normally until I explicitly say "Export to Reading Room". Then export the lesson as a Markdown (.md) file, not JSON. If you cannot attach a file, provide its complete Markdown content in one fenced markdown block for me to copy.
 Begin with a # lesson title and use ## and ### headings, bold key terms, lists, blockquotes for takeaways, and Markdown tables for comparisons or corrections. Use only sections relevant to our session; ordinary Markdown is supported and no rigid template is required. Do not use raw HTML, embedded scripts, or custom layout syntax.
-Include only material we actually studied. Preserve the full explanations, examples, source references, my original answers, feedback${englishCoaching ? ", corrected and professional versions, correction explanations and grammar points" : ""}. Do not shorten the lesson into a summary. Include vocabulary and practice questions with answers as sections in the document when relevant. These remain part of the saved note; they do not automatically become separate flashcards.
+Include only material we actually studied. Preserve the full explanations, examples, source references, my original answers, feedback${englishCoaching ? ", corrected and professional versions, correction explanations and grammar points" : ""}. Do not shorten the lesson into a summary.
+To populate Reading Room's Vocabulary and Review, include these two Markdown tables when relevant. Keep the section titles and column headers exactly as shown in English, but write their contents in our chosen language:
+## Vocabulary
+| Word | Definition | Example |
+| --- | --- | --- |
+Each row must contain one actual term we studied, its meaning, and an optional example sentence.
+## Review cards
+| Question | Answer |
+| --- | --- |
+Each row must contain one self-contained recall or application question and its correct answer based on our session. Include both sides; do not leave the answers for me to fill in. Omit an empty section rather than adding sample or placeholder rows. Escape literal pipe characters inside cells with a backslash. Keep each row on one line. Maximum 100 vocabulary rows and 100 review rows; words/questions up to 500 characters, definitions/answers up to 50,000, examples up to 5,000. These sections remain in the formatted note and are also offered as separate vocabulary entries and review cards for me to select before saving.
 For each picture, include a descriptive Markdown image reference such as ![Description](images/diagram.png). Provide downloadable image files separately when available, or clearly say the image must be supplied. Never invent an image or claim that a .md file embeds the image bytes. I will attach the pictures in Reading Room. Prefer blockquotes and tables to explain ideas when no image is available.
 Keep each .md lesson under 50,000 characters. If the session is longer, split it into separate clearly named lesson files without dropping content. Do not invent review dates or mastery scores.`;
 }
