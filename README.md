@@ -55,6 +55,14 @@ pnpm build
 
 Unit tests cover progress, Unicode indexing, input validation, and FSRS date serialization. PGlite executes the actual SQL migrations to verify RLS isolation, relationship validation, stale review conflicts, and atomic duplicate-safe restore. Playwright uses a loopback-only Supabase facade with **simulated authentication** and real SQL/RLS, server APIs, editor, and PDF renderer. This does not verify Supabase email delivery or real production login. Windows tests use Edge; on Linux install Chromium with `pnpm exec playwright install chromium`. The test harness uses ports 3001 and 9999 and never writes production data.
 
+## Studying with ChatGPT Plus
+
+Open a book, article, or chapter and select **Study with ChatGPT**. In **Prepare study session**, choose the explanation language and goal, copy the prompt, and open ChatGPT Study mode. Paste the prompt and upload your ebook or chapter directly in ChatGPT. Reading Room does not send requests to OpenAI or require an API key.
+
+After studying, ask ChatGPT **Export to Reading Room**. Copy its JSON response (or save it as a `.json` file). Back in **Save your learning**, paste or upload it, select **Preview import**, review the entries, and save the selected items. Notes, vocabulary, and recall cards are linked to the source and its workspace. Cards begin as new cards; FSRS scheduling starts when you grade a review. Ordinary text can also be saved using **Plain notes**.
+
+Imports use the existing atomic Supabase restore operation with no workspace changes. Content-derived IDs prevent identical items being inserted again for the same source, including retries after a connection failure; existing records are never overwritten. Changed text is a new item. Study packs are limited to 500 KB, 30 notes, 100 vocabulary items, and 100 cards. Imported text is treated as text, never executable HTML. ChatGPT's own subscription limits still apply.
+
 ## Backups and maintenance
 
 Settings → Download JSON backup exports all owned workspaces, entries, and review logs from the database. Restore previews counts and requires confirmation; it skips existing IDs and performs the entire restore transactionally. Invalid relationships roll back the import. Current HTTP import limit is 3.5 MB. JSON exports contain image references; separately back up Supabase Storage objects to preserve the image bytes. Existing objects are not automatically deleted when a note is removed, protecting references from other notes.

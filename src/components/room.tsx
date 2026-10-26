@@ -44,6 +44,7 @@ import {
 } from "@/lib/model";
 import { demoEntries, demoWorkspaces } from "@/lib/demo";
 import EntryForm from "./entry-form";
+import StudyBridge from "./study-bridge";
 import Insights from "./insights";
 const Editor = dynamic(() => import("./editor"), {
   ssr: false,
@@ -604,6 +605,23 @@ export default function Room({
                       "A place to make this idea your own."}
                   </p>
                   <div className="row wrap">
+                    {email &&
+                      !demo &&
+                      ["book", "article", "chapter"].includes(item.kind) && (
+                        <StudyBridge
+                          key={item.id}
+                          source={item}
+                          language={
+                            workspaces.find((w) => w.id === item.workspace_id)
+                              ?.language ?? "English"
+                          }
+                          onImported={async () => {
+                            const data = await api("/api/data");
+                            setEntries(data.entries);
+                            setReviews(data.reviews);
+                          }}
+                        />
+                      )}
                     <button
                       className="secondary"
                       onClick={() => {

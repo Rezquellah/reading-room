@@ -57,6 +57,62 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await page.getByLabel("Title", { exact: true }).fill("Focus and attention");
   await page.getByLabel("Chapter number").fill("1");
   await page.getByRole("button", { name: "Add chapter", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Study with ChatGPT", exact: true })
+    .click();
+  await expect(page.getByLabel("Study prompt")).toHaveValue(
+    /reading-room-study-v1/,
+  );
+  await page
+    .getByRole("button", { name: "2. Save your learning", exact: true })
+    .click();
+  await page.getByLabel("Paste the study pack").fill(
+    JSON.stringify({
+      format: "reading-room-study-v1",
+      notes: [
+        {
+          title: "Study session reflection",
+          text: "La mémoire se construit par le rappel.",
+        },
+      ],
+      vocabulary: [
+        { word: "rappel", definition: "Recall", example: "Le rappel actif." },
+      ],
+      cards: [
+        { question: "What strengthens memory?", answer: "Active recall." },
+      ],
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Preview import", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Save 3 selected items", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Saved 3 items");
+  await page
+    .getByRole("button", { name: "Save 3 selected items", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Saved 0 items. Skipped 3",
+  );
+  await page.screenshot({
+    path: "test-results/study-import.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page
+    .getByRole("button", { name: "Close study workflow", exact: true })
+    .click();
+  const importedState = await (await page.request.get("/api/data")).json();
+  const importedNote = importedState.entries.find(
+    (e: { title: string }) => e.title === "Study session reflection",
+  );
+  expect(importedNote.parent_id).toBe(
+    importedState.entries.find(
+      (e: { title: string }) => e.title === "Focus and attention",
+    ).id,
+  );
   await page.getByRole("button", { name: "Write a note", exact: true }).click();
   await page
     .getByLabel("Title", { exact: true })
@@ -116,21 +172,22 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     .getByRole("button", { name: /^Review/ })
     .first()
     .click();
-  await page.getByRole("button", { name: /Review 1 due cards/ }).click();
-  await expect(
-    page.getByText("Undivided attention and an intentional practice.", {
-      exact: true,
-    }),
-  ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Reveal answer", exact: true })
-    .click();
-  await expect(
-    page.getByText("Undivided attention and an intentional practice.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Good", exact: true }).click();
+  await page.getByRole("button", { name: /Review 2 due cards/ }).click();
+  const reviewedAnswers: string[] = [];
+  for (let i = 0; i < 2; i++) {
+    await expect(page.locator(".answer")).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Reveal answer", exact: true })
+      .click();
+    reviewedAnswers.push(await page.locator(".answer").innerText());
+    await page.getByRole("button", { name: "Good", exact: true }).click();
+  }
+  expect(reviewedAnswers.sort()).toEqual(
+    [
+      "Active recall.",
+      "Undivided attention and an intentional practice.",
+    ].sort(),
+  );
   await expect(
     page.getByText("A little more connected.", { exact: true }),
   ).toBeVisible();
@@ -172,7 +229,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     page.getByRole("status").filter({ hasText: "Saved" }),
   ).toBeVisible();
   const state = await (await page.request.get("/api/data")).json();
-  expect(state.reviews).toHaveLength(1);
+  expect(state.reviews).toHaveLength(2);
   const note = state.entries.find(
     (e: { title: string }) => e.title === "Réflexions françaises",
   );

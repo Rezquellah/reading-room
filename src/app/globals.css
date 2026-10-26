@@ -1,4 +1,42 @@
 @import "tailwindcss";
+.study-dialog {
+  max-width: 760px;
+  width: calc(100% - 32px);
+}
+.study-stack {
+  display: grid;
+  gap: 16px;
+}
+.study-stack p,
+.study-message {
+  font-size: 13px;
+}
+.study-preview {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.study-preview-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.study-preview-row > span {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.study-preview-row small {
+  color: var(--muted);
+}
+.study-preview-row span span {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
 :root {
   --paper: #f8f7f3;
   --surface: #fffefa;
