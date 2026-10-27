@@ -25,6 +25,20 @@ export function extractStudyItems(markdown: string) {
   const vocabulary: { word: string; definition: string; example: string }[] =
     [];
   const cards: { question: string; answer: string }[] = [];
+  const practice: { title: string; instructions: string }[] = [];
+  const seenPractice = new Set<string>();
+  const addPractice = (title: string, instructions: string) => {
+    if (!title.trim() || !instructions.trim()) return;
+    const value = {
+      title: title.trim().slice(0, 500),
+      instructions: instructions.trim(),
+    };
+    const key = JSON.stringify(value);
+    if (!seenPractice.has(key)) {
+      practice.push(value);
+      seenPractice.add(key);
+    }
+  };
   const seenWords = new Set<string>(),
     seenCards = new Set<string>();
   const addWord = (word: string, definition: string, example = "") => {
@@ -100,12 +114,28 @@ export function extractStudyItems(markdown: string) {
         ]);
         const q = index(["question", "front", "recto"]),
           a = index(["answer", "back", "reponse", "verso"]);
+        const exercise = index([
+          "exercise",
+          "task",
+          "challenge",
+          "exercice",
+          "defi",
+        ]);
+        const instructions = index([
+          "instructions",
+          "action",
+          "application",
+          "consigne",
+          "consignes",
+        ]);
         for (const row of token.rows) {
           const value = (i: number) =>
             i >= 0 && row[i] ? plain(row[i].tokens) : "";
           if (word >= 0 && definition >= 0)
             addWord(value(word), value(definition), value(example));
           else if (q >= 0 && a >= 0) addCard(value(q), value(a));
+          else if (exercise >= 0 && instructions >= 0)
+            addPractice(value(exercise), value(instructions));
         }
       } else if (token.type === "list") {
         for (const item of token.items) visit(item.tokens, depth + 1);
@@ -128,7 +158,76 @@ export function extractStudyItems(markdown: string) {
       }
     }
   }
-  visit(Lexer.lex(markdown, { gfm: true }));
+  const tokens = Lexer.lex(markdown, { gfm: true });
+  visit(tokens);
   flush();
-  return { vocabulary, cards };
+  // Older exports often contain a complete scenario under a Practice/Challenge heading.
+  // Preserve it as an unanswered exercise, never as a completed action or an answer key.
+  for (let i = 0; i < tokens.length; i++) {
+    const heading = tokens[i] as MarkedToken;
+    if (heading.type !== "heading") continue;
+    const title = plain(heading.tokens);
+    const name = normalize(title);
+    if (
+      !/\b(practice|challenge|exercise|exercises|pratique|exercice|exercices|defi)\b/.test(
+        name,
+      ) ||
+      /\b(questions|cards|review)\b/.test(name)
+    )
+      continue;
+    let end = i + 1;
+    while (end < tokens.length) {
+      const next = tokens[end] as MarkedToken;
+      if (next.type === "heading" && next.depth <= heading.depth) break;
+      end++;
+    }
+    const sectionTokens = tokens.slice(i + 1, end);
+    // Tables are already split into individual exercises by visit().
+    const hasPracticeTable = sectionTokens.some((raw) => {
+      const t = raw as MarkedToken;
+      if (t.type !== "table") return false;
+      const headers = t.header.map((cell) => normalize(plain(cell.tokens)));
+      return (
+        headers.some((h) =>
+          ["exercise", "task", "challenge", "exercice", "defi"].includes(h),
+        ) &&
+        headers.some((h) =>
+          [
+            "instructions",
+            "action",
+            "application",
+            "consigne",
+            "consignes",
+          ].includes(h),
+        )
+      );
+    });
+    if (!hasPracticeTable) {
+      const readable = (items: Token[]): string =>
+        items
+          .map((raw) => {
+            const t = raw as MarkedToken;
+            if (t.type === "list")
+              return t.items
+                .map((item) => `• ${readable(item.tokens)}`)
+                .join("\n");
+            if (t.type === "space") return "";
+            if (t.type === "code") return t.text;
+            if (t.type === "blockquote") return readable(t.tokens);
+            return "tokens" in t && t.tokens
+              ? plain(t.tokens)
+              : "text" in t
+                ? t.text
+                : t.raw;
+          })
+          .filter(Boolean)
+          .join("\n\n");
+      addPractice(title, readable(sectionTokens));
+    }
+    i = end - 1;
+  }
+  const vocabularyReview = !cards.length && vocabulary.length > 0;
+  if (vocabularyReview)
+    for (const word of vocabulary) addCard(word.word, word.definition);
+  return { vocabulary, cards, practice, vocabularyReview };
 }

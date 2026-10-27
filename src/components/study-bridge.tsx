@@ -10,6 +10,7 @@ import {
   parseMarkdownStudy,
   studyEntries,
   studyPrompt,
+  completeStudyExportPrompt,
   learningGoals,
   studyPreferencesSchema,
   type StudyPreferences,
@@ -52,6 +53,15 @@ export default function StudyBridge({
   const [images, setImages] = useState<Record<string, string>>({});
   const [pack, setPack] = useState<StudyPack | null>(null),
     [selected, setSelected] = useState<string[]>([]);
+  const [allowPartial, setAllowPartial] = useState(false);
+  const missing =
+    pack && mode === "markdown"
+      ? [
+          ...(!pack.vocabulary.length ? ["Vocabulary"] : []),
+          ...(!pack.cards.length ? ["Review"] : []),
+          ...(!pack.practice.length ? ["Practice"] : []),
+        ]
+      : [];
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const markdownPreview = useMemo(() => {
@@ -144,10 +154,22 @@ export default function StudyBridge({
           detail: c.answer,
           label: "Recall card",
         })),
+        ...pack.practice.map((p, i) => ({
+          key: `practice:${i}`,
+          title: p.title,
+          detail: p.instructions,
+          label: "Practice exercise",
+        })),
       ]
     : [];
   async function importPack() {
-    if (!pack || !selected.length || busy) return;
+    if (
+      !pack ||
+      !selected.length ||
+      busy ||
+      (missing.length > 0 && !allowPartial)
+    )
+      return;
     setBusy(true);
     setMessage("");
     try {
@@ -158,6 +180,9 @@ export default function StudyBridge({
           selected.includes(`vocabulary:${i}`),
         ),
         cards: pack.cards.filter((_, i) => selected.includes(`cards:${i}`)),
+        practice: pack.practice.filter((_, i) =>
+          selected.includes(`practice:${i}`),
+        ),
       };
       const entries = await studyEntries(chosen, source, images);
       const response = await fetch("/api/backup", {
@@ -175,7 +200,7 @@ export default function StudyBridge({
         throw new Error(result.error || "Import failed. You can retry safely.");
       await onImported();
       setMessage(
-        `Saved ${result.inserted} items. Skipped ${result.skipped} existing items. Find notes and vocabulary under this source, and cards in Review.`,
+        `Saved ${result.inserted} items. Skipped ${result.skipped} existing items. Find your learning in Notes, Vocabulary, Review, and Practice.`,
       );
     } catch (e) {
       setMessage(
@@ -468,8 +493,9 @@ export default function StudyBridge({
               <p>
                 Up to 50,000 characters per lesson. Markdown keeps headings,
                 lists, tables, and emphasis. Tables with Word / Definition /
-                Example and Question / Answer columns also populate Vocabulary
-                and Review. Use the updated study prompt for this format.
+                Example, Question / Answer, and Exercise / Instructions columns
+                populate Vocabulary, Review, and Practice. The preview checks
+                all four destinations before saving.
               </p>
               <label>
                 Or choose a{" "}
@@ -533,10 +559,12 @@ export default function StudyBridge({
                               }),
                             );
                     setPack(parsed);
+                    setAllowPartial(false);
                     setSelected([
                       ...parsed.notes.map((_, i) => `notes:${i}`),
                       ...parsed.vocabulary.map((_, i) => `vocabulary:${i}`),
                       ...parsed.cards.map((_, i) => `cards:${i}`),
+                      ...parsed.practice.map((_, i) => `practice:${i}`),
                     ]);
                     setMessage("");
                   } catch (e) {
@@ -554,18 +582,66 @@ export default function StudyBridge({
                   </p>
                   <p>
                     Found {pack.notes.length} note(s), {pack.vocabulary.length}{" "}
-                    vocabulary item(s), and {pack.cards.length} review card(s).
+                    vocabulary item(s), {pack.cards.length} review card(s), and{" "}
+                    {pack.practice.length} practice exercise(s).
                   </p>
-                  {markdownPreview &&
-                    (!pack.vocabulary.length || !pack.cards.length) && (
-                      <p>
-                        Missing vocabulary or cards? Ask ChatGPT to include a
-                        Vocabulary table with Word, Definition, Example columns
-                        and a Review cards table with Question, Answer columns.
-                        Only complete entries are extracted; the full lesson is
-                        still preserved.
+                  {pack.vocabularyReview && (
+                    <p>
+                      No answered review questions were found. Review cards use
+                      the vocabulary terms on the front and their supplied
+                      definitions on the back. Deselect them if you only want
+                      concept questions.
+                    </p>
+                  )}
+                  {missing.length > 0 && (
+                    <div className="study-stack">
+                      <p role="alert">
+                        <strong>
+                          Incomplete study kit: {missing.join(", ")} missing.
+                        </strong>{" "}
+                        These destinations will remain empty for this import.
+                        Copy the request below into your study chat to complete
+                        the export, then upload the new file.
                       </p>
-                    )}
+                      <label>
+                        Complete export request
+                        <textarea
+                          readOnly
+                          rows={4}
+                          value={completeStudyExportPrompt}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={busy}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(
+                              completeStudyExportPrompt,
+                            );
+                            setMessage("Completion request copied.");
+                          } catch {
+                            setMessage(
+                              "Select and copy the completion request above.",
+                            );
+                          }
+                        }}
+                      >
+                        Copy completion request
+                      </button>
+                      <label className="study-preview-row">
+                        <input
+                          type="checkbox"
+                          checked={allowPartial}
+                          disabled={busy}
+                          onChange={(e) => setAllowPartial(e.target.checked)}
+                        />
+                        Save available items only; I understand some categories
+                        are missing
+                      </label>
+                    </div>
+                  )}
                   {markdownPreview && (
                     <>
                       <p>
@@ -624,7 +700,11 @@ export default function StudyBridge({
                   <button
                     className="primary"
                     onClick={() => void importPack()}
-                    disabled={busy || !selected.length}
+                    disabled={
+                      busy ||
+                      !selected.length ||
+                      (missing.length > 0 && !allowPartial)
+                    }
                   >
                     {busy
                       ? "Saving…"

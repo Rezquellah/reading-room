@@ -32,12 +32,23 @@ export const studySchema = z
       .array(z.object({ question: short, answer: body }))
       .max(100)
       .default([]),
+    practice: z
+      .array(z.object({ title: short, instructions: body }))
+      .max(100)
+      .default([]),
+    vocabularyReview: z.boolean().default(false),
   })
   .refine(
-    (v) => v.notes.length + v.vocabulary.length + v.cards.length > 0,
-    "Include at least one note, word, or recall card.",
+    (v) =>
+      v.notes.length +
+        v.vocabulary.length +
+        v.cards.length +
+        v.practice.length >
+      0,
+    "Include at least one note, word, recall card, or practice exercise.",
   );
 export type StudyPack = z.infer<typeof studySchema>;
+export const completeStudyExportPrompt = `Re-export our existing lesson as one complete Markdown (.md) study kit. Preserve the full note. Include a Vocabulary table with Word | Definition | Example columns, a Review cards table with Question | Answer columns, and a Practice table with Exercise | Instructions columns. Create answered factual recall questions from concepts already explained, even if my practical challenge is still unanswered. Put unanswered challenges and their full scenarios in Practice. Do not invent my responses, completion, or mastery. Do not fabricate content if the lesson does not support a category; explain what is missing. Keep each table row on one line and escape literal pipe characters in cells. Keep the file under 50,000 characters. Return Markdown, not JSON.`;
 export function parseMarkdownStudy(
   raw: string,
   fallbackTitle: string,
@@ -130,7 +141,7 @@ LESSON STYLE
 Teach one meaningful section at a time, with a clear explanation, the author's reasoning, and a realistic example related to my work or everyday life. Distinguish the author's ideas from your own examples. Cite available pages or section headings. Use readable headings and comparison tables when helpful.
 ${learningGoals[preferences.learningGoal].instruction}
 ${englishCoaching ? `Invite me to practise responding in ${coachingLanguage}, using relevant expressions, while explaining corrections in the explanation language above.` : "Use the explanation language for our discussion; language coaching is off."}
-Ask one question or challenge at a time and wait for my answer. Do not reveal a model answer before I try.
+Ask one question or challenge at a time and wait for my answer. During teaching, do not reveal a model answer before I try. At export time, include answered factual recall cards separately from any unanswered practice challenges.
 
 AFTER MY ANSWER
 Explain what I understood well, any missing nuance, and how to improve my reasoning or application. Be specific and encouraging; do not praise an incorrect interpretation. ${
@@ -149,7 +160,7 @@ SAVE OUR LEARNING
 Keep teaching normally until I explicitly say "Export to Reading Room". Then export the lesson as a Markdown (.md) file, not JSON. If you cannot attach a file, provide its complete Markdown content in one fenced markdown block for me to copy.
 Begin with a # lesson title and use ## and ### headings, bold key terms, lists, blockquotes for takeaways, and Markdown tables for comparisons or corrections. Use only sections relevant to our session; ordinary Markdown is supported and no rigid template is required. Do not use raw HTML, embedded scripts, or custom layout syntax.
 Include only material we actually studied. Preserve the full explanations, examples, source references, my original answers, feedback${englishCoaching ? ", corrected and professional versions, correction explanations and grammar points" : ""}. Do not shorten the lesson into a summary.
-To populate Reading Room's Vocabulary and Review, include these two Markdown tables when relevant. Keep the section titles and column headers exactly as shown in English, but write their contents in our chosen language:
+Export a complete study kit: the full lesson note plus Vocabulary, Review cards, and Practice. For any substantive lesson, include relevant terms, at least three answered recall questions about concepts already explained, and at least one practical exercise based on the lesson. Recall cards do not require that I have attempted a practice challenge. Never claim I answered, completed, or mastered an exercise when I have not. If there is not enough source material for a category, say so explicitly instead of inventing it. Keep the section titles and column headers exactly as shown in English, but write their contents in our chosen language:
 ## Vocabulary
 | Word | Definition | Example |
 | --- | --- | --- |
@@ -157,7 +168,11 @@ Each row must contain one actual term we studied, its meaning, and an optional e
 ## Review cards
 | Question | Answer |
 | --- | --- |
-Each row must contain one self-contained recall or application question and its correct answer based on our session. Include both sides; do not leave the answers for me to fill in. Omit an empty section rather than adding sample or placeholder rows. Escape literal pipe characters inside cells with a backslash. Keep each row on one line. Maximum 100 vocabulary rows and 100 review rows; words/questions up to 500 characters, definitions/answers up to 50,000, examples up to 5,000. These sections remain in the formatted note and are also offered as separate vocabulary entries and review cards for me to select before saving.
+Each row must contain one self-contained recall question and its correct answer based on our session. Include both sides; do not leave the answers for me to fill in. Use factual concept questions when a practical scenario is still awaiting my response.
+## Practice
+| Exercise | Instructions |
+| --- | --- |
+Each row must contain a short exercise title and full instructions, including the scenario, what to do, and any relevant constraints. Include pending challenges here without inventing my response or marking them complete. Omit an empty section rather than adding sample or placeholder rows. Escape literal pipe characters inside cells with a backslash. Keep each row on one line. Maximum 100 rows per category; words/questions/exercise titles up to 500 characters, definitions/answers/instructions up to 50,000, examples up to 5,000. These sections remain in the formatted note and also populate Vocabulary, Review, and Practice after I preview and save them.
 For each picture, include a descriptive Markdown image reference such as ![Description](images/diagram.png). Provide downloadable image files separately when available, or clearly say the image must be supplied. Never invent an image or claim that a .md file embeds the image bytes. I will attach the pictures in Reading Room. Prefer blockquotes and tables to explain ideas when no image is available.
 Keep each .md lesson under 50,000 characters. If the session is longer, split it into separate clearly named lesson files without dropping content. Do not invent review dates or mastery scores.`;
 }
@@ -192,6 +207,11 @@ export async function studyEntries(
       kind: "card" as const,
       title: c.question,
       data: { answer: c.answer },
+    })),
+    ...pack.practice.map((p) => ({
+      kind: "action" as const,
+      title: p.title,
+      data: { action: p.instructions, status: "Planned" },
     })),
   ];
   return Promise.all(

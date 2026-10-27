@@ -122,8 +122,45 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await expect(
     page.getByRole("combobox", { name: /^Import format/ }),
   ).toHaveValue("markdown");
+  await page
+    .getByLabel("Paste your Markdown lesson")
+    .fill("# Incomplete lesson\n\nJust a note.");
+  await page
+    .getByRole("button", { name: "Preview import", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Vocabulary, Review, Practice missing",
+  );
+  await expect(
+    page.getByRole("button", { name: "Save 1 selected items", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("checkbox", { name: /Save available items only/ })
+    .check();
+  await expect(
+    page.getByRole("button", { name: "Save 1 selected items", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByLabel("Paste your Markdown lesson")
+    .fill(
+      "# Older lesson\n\n| Expression | Meaning | Example |\n| --- | --- | --- |\n| Recall | Remembering information | Recall a fact. |\n\n## Negotiation Practice — Challenge 1\nExplain the idea to a colleague.\n\nNo learner answer yet.",
+    );
+  await page
+    .getByRole("button", { name: "Preview import", exact: true })
+    .click();
+  await expect(
+    page.getByText(/No answered review questions were found/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", {
+      name: /Practice exercise Negotiation Practice/,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Save 4 selected items", exact: true }),
+  ).toBeEnabled();
   const markdownLesson =
-    "# Markdown lesson\n\n## Key idea\n\n**Active recall** helps learning.\n\n> A useful takeaway.\n\n| Original | Improved |\n| --- | --- |\n| I learns | I learn |\n\n![Learning diagram](images/learning.png)\n\n## Vocabulary\n| Word | Definition | Example |\n| --- | --- | --- |\n| retrieval | Bringing information to mind | Practise retrieval. |\n\n## Review cards\n| Question | Answer |\n| --- | --- |\n| How do we practise retrieval? | Recall without looking. |";
+    "# Markdown lesson\n\n## Key idea\n\n**Active recall** helps learning.\n\n> A useful takeaway.\n\n| Original | Improved |\n| --- | --- |\n| I learns | I learn |\n\n![Learning diagram](images/learning.png)\n\n## Vocabulary\n| Word | Definition | Example |\n| --- | --- | --- |\n| retrieval | Bringing information to mind | Practise retrieval. |\n\n## Review cards\n| Question | Answer |\n| --- | --- |\n| How do we practise retrieval? | Recall without looking. |\n\n## Practice\n| Exercise | Instructions |\n| --- | --- |\n| Apply active recall | Close the book and explain its key idea in your own words. |";
   await page.getByLabel("Or choose a Markdown (.md) file").setInputFiles({
     name: "lesson.md",
     mimeType: "text/markdown",
@@ -137,7 +174,7 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await expect(lessonPreview.locator("table").first()).toContainText("I learn");
   await expect(
     page.getByText(
-      "Found 1 note(s), 1 vocabulary item(s), and 1 review card(s).",
+      "Found 1 note(s), 1 vocabulary item(s), 1 review card(s), and 1 practice exercise(s).",
     ),
   ).toBeVisible();
   await page.getByLabel(/Picture: Learning diagram/).setInputFiles({
@@ -157,14 +194,14 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Save 3 selected items", exact: true })
+    .getByRole("button", { name: "Save 4 selected items", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Saved 3 items");
+  await expect(page.getByRole("status")).toContainText("Saved 4 items");
   await page
-    .getByRole("button", { name: "Save 3 selected items", exact: true })
+    .getByRole("button", { name: "Save 4 selected items", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText(
-    "Saved 0 items. Skipped 3",
+    "Saved 0 items. Skipped 4",
   );
   const markdownState = await (await page.request.get("/api/data")).json();
   const savedLesson = markdownState.entries.find(
@@ -174,6 +211,19 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   expect(JSON.stringify(savedLesson.data.content)).toContain(
     "/api/assets?path=",
   );
+  const savedPractice = markdownState.entries.find(
+    (entry: { title: string }) => entry.title === "Apply active recall",
+  );
+  expect(savedPractice).toMatchObject({
+    kind: "action",
+    parent_id: savedLesson.parent_id,
+    workspace_id: savedLesson.workspace_id,
+    data: {
+      status: "Planned",
+      action: "Close the book and explain its key idea in your own words.",
+    },
+  });
+  expect(savedPractice.data).not.toHaveProperty("reflection");
   await page.getByRole("button", { name: "Close study workflow" }).click();
   await page.getByRole("button", { name: "Search ⌘ K" }).click();
   await page.getByLabel("Search content").fill("Markdown lesson");
@@ -322,6 +372,18 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
   await expect(
     page.getByText("A little more connected.", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await page.getByRole("button", { name: /Apply active recall/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Apply active recall", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Close the book and explain its key idea in your own words.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Planned", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
   await expect(page.getByText("retrieval", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add word", exact: true }).click();
