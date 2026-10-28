@@ -30,7 +30,7 @@ test.beforeEach(async ({ context }) => {
 test("complete bilingual reading, notes, recall, export, and restore journey", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await page
     .getByRole("button", { name: "Start here", exact: true })
     .first()
@@ -468,4 +468,65 @@ test("complete bilingual reading, notes, recall, export, and restore journey", a
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+test("legacy journal writing stays accessible as notes", async ({ page }) => {
+  const workspaceResponse = await page.request.post("/api/data", {
+    data: {
+      operation: "workspace",
+      value: {
+        name: "Legacy writing",
+        language: "en",
+        color: "#355e49",
+        icon: "📚",
+      },
+    },
+  });
+  expect(workspaceResponse.ok()).toBeTruthy();
+  const workspace = await workspaceResponse.json();
+  const saved = await page.request.post("/api/data", {
+    data: {
+      value: {
+        workspace_id: workspace.id,
+        kind: "journal",
+        title: "A thought worth preserving",
+        data: {
+          content: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "My original reflection remains intact.",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    },
+  });
+  expect(saved.ok()).toBeTruthy();
+  const entry = await saved.json();
+  await page.goto("/app");
+  await expect(
+    page.getByRole("button", { name: "Journal", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: /Search/ })
+    .first()
+    .click();
+  await page.getByLabel("Search content").fill(entry.title);
+  await page.getByText(entry.title, { exact: true }).click();
+  await expect(page.locator(".tiptap")).toContainText(
+    "My original reflection remains intact.",
+  );
+  const backup = await (await page.request.get("/api/backup")).json();
+  expect(
+    backup.entries.find((item: { id: string }) => item.id === entry.id).data
+      .content,
+  ).toEqual(entry.data.content);
 });

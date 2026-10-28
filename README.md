@@ -92,3 +92,9 @@ Commit SQL migrations with schema changes. Run checks before pushing. Configure 
 - Supabase Site URL and all four production/localhost login and recovery callback URLs were confirmed in the dashboard.
 - Anonymous requests to data, backup, and PDF routes returned 401; private asset access returned 403.
 - Typecheck, lint (two image optimization warnings), 11 unit/database tests, the bilingual Playwright workflow, and production build passed. GitHub pushes deploy the separate 2.0 Vercel project.
+
+## Public website
+
+The public homepage (`/`) introduces the study workflow. `/about` describes the product and `/privacy` explains the implemented data handling, with contact at contact@rezquellah.com. The authenticated study workspace and demo are at `/app`; `?auth=signup` and `?auth=login` open the corresponding dialogs for signed-out visitors. Authentication callbacks return to `/app`.
+
+Journal is retired from navigation and creation flows. Legacy journal records remain in the database and backups; the client presents them as editable notes so existing writing stays accessible. No production content is deleted or reset.

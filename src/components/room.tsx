@@ -56,7 +56,6 @@ type View =
   | "Vocabulary"
   | "Review"
   | "Practice"
-  | "Journal"
   | "Search"
   | "Settings";
 const nav = [
@@ -65,7 +64,6 @@ const nav = [
   ["Vocabulary", Languages],
   ["Review", Brain],
   ["Practice", Sprout],
-  ["Journal", Feather],
   ["Search", Search],
 ] as const;
 type Form = {
@@ -92,9 +90,11 @@ async function api(path: string, body?: unknown) {
 export default function Room({
   configured,
   email,
+  initialAuth = null,
 }: {
   configured: boolean;
   email: string | null;
+  initialAuth?: "login" | "signup" | null;
 }) {
   const [view, setView] = useState<View>("Dashboard"),
     [workspaces, setWorkspaces] = useState<Workspace[]>([]),
@@ -108,7 +108,9 @@ export default function Room({
     [error, setError] = useState(""),
     [form, setForm] = useState<Form | null>(null),
     [workspaceForm, setWorkspaceForm] = useState(false),
-    [auth, setAuth] = useState<"login" | "signup" | "reset" | null>(null),
+    [auth, setAuth] = useState<"login" | "signup" | "reset" | null>(
+      initialAuth,
+    ),
     [selected, setSelected] = useState<string | null>(null),
     [tab, setTab] = useState("Overview"),
     [query, setQuery] = useState(""),
@@ -135,7 +137,12 @@ export default function Room({
     try {
       const v = await api("/api/data");
       setWorkspaces(v.workspaces);
-      setEntries(v.entries);
+      // Keep legacy journal writing accessible as notes without deleting stored content.
+      setEntries(
+        v.entries.map((entry: Entry) =>
+          entry.kind === "journal" ? { ...entry, kind: "note" } : entry,
+        ),
+      );
       setReviews(v.reviews);
       setError("");
     } catch (e) {
@@ -194,7 +201,7 @@ export default function Room({
   }
   function open(e: Entry) {
     setSelected(e.id);
-    setTab(e.kind === "note" || e.kind === "journal" ? "Notes" : "Overview");
+    setTab(e.kind === "note" ? "Notes" : "Overview");
   }
   function guard() {
     if (!email || demo) {
@@ -387,9 +394,7 @@ export default function Room({
             ? e.kind === "vocabulary"
             : view === "Practice"
               ? e.kind === "action"
-              : view === "Journal"
-                ? e.kind === "journal"
-                : true) &&
+              : true) &&
         !e.data.archived &&
         (!since || e.created_at.slice(0, 10) >= since) &&
         (!favorites || e.data.favorite) &&
@@ -410,7 +415,7 @@ export default function Room({
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobile ? "is-open" : ""}`}>
-        <NextLink className="brand" href="/" aria-label="Reading Room home">
+        <NextLink className="brand" href="/app" aria-label="Reading Room home">
           <span className="brand-mark">
             <BookOpen size={25} />
           </span>
@@ -455,7 +460,6 @@ export default function Room({
                       Vocabulary: "Vocabulaire",
                       Review: "Révision",
                       Practice: "Pratique",
-                      Journal: "Journal",
                       Search: "Recherche",
                     }[name]
                   : name}
@@ -684,7 +688,7 @@ export default function Room({
                         "Review",
                         "Practice",
                       ]
-                    : ["note", "journal"].includes(item.kind)
+                    : item.kind === "note"
                       ? ["Notes"]
                       : ["Overview"]
                 ).map((t) => (
@@ -791,7 +795,7 @@ export default function Room({
                 </div>
               )}
               {tab === "Notes" &&
-                (["note", "journal"].includes(item.kind) ? (
+                (item.kind === "note" ? (
                   <>
                     <div className="row wrap note-actions">
                       <button
@@ -822,7 +826,7 @@ export default function Room({
                             }).catch((e) => setError(String(e)))
                           }
                         >
-                          <option value="">Workspace journal</option>
+                          <option value="">Workspace notes</option>
                           {entries
                             .filter(
                               (e) =>
@@ -1176,13 +1180,7 @@ export default function Room({
               )}
               <Insights entries={scoped} reviews={reviews} locale={locale} />
             </>
-          ) : [
-              "Library",
-              "Vocabulary",
-              "Practice",
-              "Journal",
-              "Search",
-            ].includes(view) ? (
+          ) : ["Library", "Vocabulary", "Practice", "Search"].includes(view) ? (
             <>
               <div className="page-intro">
                 <div>
@@ -1195,7 +1193,6 @@ export default function Room({
                         Library: "Your personal library.",
                         Vocabulary: "Words worth keeping.",
                         Practice: "Put your ideas into motion.",
-                        Journal: "A record of becoming.",
                         Search: "Rediscover what you know.",
                       }[view as "Library"]
                     }
@@ -1209,8 +1206,6 @@ export default function Room({
                           "Collect a word. Find its meaning. Make it yours.",
                         Practice:
                           "Small actions turn good ideas into a different way of living.",
-                        Journal:
-                          "Connect the dots between what you read and who you are.",
                         Search:
                           "Follow a thought across your books, notes, and discoveries.",
                       }[view as "Library"]
@@ -1225,9 +1220,7 @@ export default function Room({
                         ? "vocabulary"
                         : view === "Practice"
                           ? "action"
-                          : view === "Journal"
-                            ? "journal"
-                            : "book",
+                          : "book",
                     )
                   }
                 >
@@ -1237,9 +1230,7 @@ export default function Room({
                     ? "word"
                     : view === "Practice"
                       ? "action"
-                      : view === "Journal"
-                        ? "entry"
-                        : "reading"}
+                      : "reading"}
                 </button>
               </div>
               <div className="filterbar">
@@ -1273,7 +1264,6 @@ export default function Room({
                           "Quote",
                           "Card",
                           "Action",
-                          "Journal",
                         ]
                       : ["All reading", "Book", "Article"]
                     ).map((v) => (
@@ -1365,7 +1355,7 @@ export default function Room({
                   {filtered.length}{" "}
                   {filtered.length === 1 ? "discovery" : "discoveries"}
                 </span>
-                {["Vocabulary", "Journal"].includes(view) && (
+                {view === "Vocabulary" && (
                   <button
                     className="text-button"
                     onClick={() => void exportPDF()}
@@ -1393,9 +1383,7 @@ export default function Room({
                         ? "vocabulary"
                         : view === "Practice"
                           ? "action"
-                          : view === "Journal"
-                            ? "journal"
-                            : "book",
+                          : "book",
                     ),
                 )
               )}
@@ -1663,6 +1651,11 @@ export default function Room({
                 </section>
                 <section className="panel">
                   <h2>Your knowledge, yours to keep.</h2>
+                  <p>
+                    <NextLink href="/">Website</NextLink> ·{" "}
+                    <NextLink href="/about">About Reading Room</NextLink> ·{" "}
+                    <NextLink href="/privacy">Privacy</NextLink>
+                  </p>
                   <p>
                     Download a portable JSON backup of your workspaces, rich
                     notes, and review history. Image references remain linked to

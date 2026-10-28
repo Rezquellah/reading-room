@@ -33,7 +33,7 @@ export default function Password() {
         <button className="primary">Update password</button>
       </form>
       <p role="status">{message}</p>
-      <Link href="/">Return to Reading Room</Link>
+      <Link href="/app">Return to Reading Room</Link>
     </main>
   );
 }

@@ -9,10 +9,10 @@ export async function GET(req: Request) {
     if (!error)
       return NextResponse.redirect(
         new URL(
-          url.searchParams.get("next") === "/password" ? "/password" : "/",
+          url.searchParams.get("next") === "/password" ? "/password" : "/app",
           url.origin,
         ),
       );
   }
-  return NextResponse.redirect(new URL("/?auth_error=1", url.origin));
+  return NextResponse.redirect(new URL("/app?auth_error=1", url.origin));
 }
