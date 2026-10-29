@@ -30,10 +30,6 @@ const server = http.createServer(async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   const url = new URL(req.url, "http://127.0.0.1:9999");
   try {
-    if (url.pathname === "/auth/v1/user") {
-      res.end(JSON.stringify(user));
-      return;
-    }
     let raw = [];
     for await (const c of req) raw.push(c);
     raw = Buffer.concat(raw);
@@ -50,6 +46,17 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     const body = raw.length ? JSON.parse(raw) : {};
+    if (url.pathname === "/auth/v1/signup") {
+      user.user_metadata = body.data ?? {};
+      res.end(JSON.stringify(user));
+      return;
+    }
+    if (url.pathname === "/auth/v1/user") {
+      if (req.method === "PUT")
+        user.user_metadata = { ...user.user_metadata, ...body.data };
+      res.end(JSON.stringify(user));
+      return;
+    }
     if (url.pathname.startsWith("/rest/v1/rpc/")) {
       const name = url.pathname.split("/").pop();
       const params = {
@@ -137,7 +144,9 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify(single ? (result.rows[0] ?? null) : result.rows));
   } catch (e) {
     res.statusCode = 400;
-    res.end(JSON.stringify({ message: e.message, code: "TEST_ERROR" }));
+    res.end(
+      JSON.stringify({ message: e.message, code: e.code ?? "TEST_ERROR" }),
+    );
   }
 });
 await new Promise((r) => server.listen(9999, "127.0.0.1", r));

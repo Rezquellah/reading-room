@@ -45,6 +45,8 @@ import {
 import { demoEntries, demoWorkspaces } from "@/lib/demo";
 import EntryForm from "./entry-form";
 import StudyBridge from "./study-bridge";
+import SignupJourney from "./signup-journey";
+import { type OnboardingPreferences, welcomeGoals } from "@/lib/onboarding";
 import Insights from "./insights";
 const Editor = dynamic(() => import("./editor"), {
   ssr: false,
@@ -128,6 +130,8 @@ export default function Room({
     [locale, setLocale] = useState("en"),
     [favorites, setFavorites] = useState(false),
     [since, setSince] = useState("");
+  const [welcome, setWelcome] = useState<OnboardingPreferences | null>(null);
+  const welcomeLoaded = useRef(false);
   const entryRef = useRef(entries);
   useEffect(() => {
     entryRef.current = entries;
@@ -135,6 +139,12 @@ export default function Room({
   async function load() {
     setLoading(true);
     try {
+      if (!welcomeLoaded.current) {
+        const setup = await api("/api/onboarding", {});
+        setWelcome(setup.preferences);
+        if (setup.workspaceId) setWorkspace(setup.workspaceId);
+        welcomeLoaded.current = true;
+      }
       const v = await api("/api/data");
       setWorkspaces(v.workspaces);
       // Keep legacy journal writing accessible as notes without deleting stored content.
@@ -615,6 +625,7 @@ export default function Room({
                         <StudyBridge
                           key={item.id}
                           source={item}
+                          welcome={welcome ?? undefined}
                           language={
                             workspaces.find((w) => w.id === item.workspace_id)
                               ?.language ?? "English"
@@ -1032,6 +1043,83 @@ export default function Room({
                   "Create an English, French, or any other language workspace.",
                   () => setWorkspaceForm(true),
                 )}
+              {email && welcome && !loading && workspaces.length > 0 && (
+                <section
+                  className="welcome-starter"
+                  aria-label="Your learning starter plan"
+                >
+                  <div>
+                    <span className="eyebrow">YOUR FIRST SMALL STEPS</span>
+                    <h2>{welcomeGoals[welcome.goal].title}</h2>
+                    <p>
+                      {welcomeGoals[welcome.goal].next}{" "}
+                      {welcome.minutes === "flexible"
+                        ? "Take it at your own pace."
+                        : `Make a little space: about ${welcome.minutes} minutes is your starting intention.`}
+                    </p>
+                  </div>
+                  <ol>
+                    <li
+                      className={books.length + articles.length ? "done" : ""}
+                    >
+                      <Check size={16} />
+                      <span>
+                        Add your first reading
+                        <span className="sr-only">
+                          {books.length + articles.length
+                            ? " — completed"
+                            : " — not yet completed"}
+                        </span>
+                      </span>
+                    </li>
+                    <li className={notes.length ? "done" : ""}>
+                      <Check size={16} />
+                      <span>
+                        Capture a note or import a lesson
+                        <span className="sr-only">
+                          {notes.length
+                            ? " — completed"
+                            : " — not yet completed"}
+                        </span>
+                      </span>
+                    </li>
+                    <li
+                      className={
+                        reviews.some((r) =>
+                          cards.some((c) => c.id === r.card_id),
+                        )
+                          ? "done"
+                          : ""
+                      }
+                    >
+                      <Check size={16} />
+                      <span>
+                        Try your first review
+                        <span className="sr-only">
+                          {reviews.some((r) =>
+                            cards.some((c) => c.id === r.card_id),
+                          )
+                            ? " — completed"
+                            : " — not yet completed"}
+                        </span>
+                      </span>
+                    </li>
+                  </ol>
+                  <button
+                    className="primary"
+                    onClick={() =>
+                      books.length + articles.length
+                        ? navigate("Library")
+                        : add("book")
+                    }
+                  >
+                    {books.length + articles.length
+                      ? "Continue in your library"
+                      : "Add your first reading"}
+                    <ArrowRight size={16} />
+                  </button>
+                </section>
+              )}
               <div className="stat-grid">
                 {[
                   [
@@ -1891,7 +1979,9 @@ export default function Room({
       >
         <Dialog.Portal>
           <Dialog.Overlay className="dialog-overlay" />
-          <Dialog.Content className="dialog compact">
+          <Dialog.Content
+            className={`dialog ${auth === "signup" ? "welcome-dialog" : "compact"}`}
+          >
             <Dialog.Title>
               {auth === "signup"
                 ? "Your next chapter awaits."
@@ -1912,76 +2002,87 @@ export default function Room({
             <Dialog.Close className="dialog-close" aria-label="Close">
               <X size={20} />
             </Dialog.Close>
-            <form
-              className="entry-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setBusy(true);
-                try {
-                  const values = Object.fromEntries(
-                    new FormData(e.currentTarget),
-                  );
-                  await api("/api/auth", { action: auth, ...values });
-                  if (auth === "login") location.reload();
-                  else
-                    setError(
-                      auth === "reset"
-                        ? "Check your email for a recovery link."
-                        : "Check your email to confirm your account, then sign in.",
-                    );
-                } catch (e) {
-                  setError(String(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              <label className="span-two">
-                Email
-                <input
-                  required
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                />
-              </label>
-              {auth !== "reset" && (
-                <label className="span-two">
-                  Password
-                  <input
-                    required
-                    type="password"
-                    name="password"
-                    minLength={8}
-                    autoComplete={
-                      auth === "signup" ? "new-password" : "current-password"
+            {auth === "signup" ? (
+              <SignupJourney
+                configured={configured}
+                onSignIn={() => {
+                  setError("");
+                  setAuth("login");
+                }}
+              />
+            ) : (
+              <>
+                <form
+                  className="entry-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setBusy(true);
+                    try {
+                      const values = Object.fromEntries(
+                        new FormData(e.currentTarget),
+                      );
+                      await api("/api/auth", { action: auth, ...values });
+                      if (auth === "login") location.reload();
+                      else
+                        setError(
+                          auth === "reset"
+                            ? "Check your email for a recovery link."
+                            : "Check your email to confirm your account, then sign in.",
+                        );
+                    } catch (e) {
+                      setError(String(e));
+                    } finally {
+                      setBusy(false);
                     }
-                  />
-                </label>
-              )}
-              <button
-                disabled={!configured || busy}
-                className="primary span-two"
-              >
-                {busy
-                  ? "One moment…"
-                  : auth === "signup"
-                    ? "Create account"
-                    : auth === "reset"
-                      ? "Send recovery email"
-                      : "Sign in"}
-              </button>
-            </form>
-            <div className="row wrap auth-links">
-              <button
-                onClick={() => setAuth(auth === "signup" ? "login" : "signup")}
-              >
-                {auth === "signup"
-                  ? "Already have an account? Sign in"
-                  : "Create an account"}
-              </button>
-              <button onClick={() => setAuth("reset")}>Forgot password?</button>
-            </div>
+                  }}
+                >
+                  <label className="span-two">
+                    Email
+                    <input
+                      required
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                    />
+                  </label>
+                  {auth !== "reset" && (
+                    <label className="span-two">
+                      Password
+                      <input
+                        required
+                        type="password"
+                        name="password"
+                        minLength={8}
+                        autoComplete="current-password"
+                      />
+                    </label>
+                  )}
+                  <button
+                    disabled={!configured || busy}
+                    className="primary span-two"
+                  >
+                    {busy
+                      ? "One moment…"
+                      : auth === "reset"
+                        ? "Send recovery email"
+                        : "Sign in"}
+                  </button>
+                </form>
+                <div className="row wrap auth-links">
+                  <button
+                    onClick={() => {
+                      setError("");
+                      setAuth("signup");
+                    }}
+                  >
+                    Create an account
+                  </button>
+                  <button onClick={() => setAuth("reset")}>
+                    Forgot password?
+                  </button>
+                </div>
+              </>
+            )}
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

@@ -98,3 +98,9 @@ Commit SQL migrations with schema changes. Run checks before pushing. Configure 
 The public homepage (`/`) introduces the study workflow. `/about` describes the product and `/privacy` explains the implemented data handling, with contact at contact@rezquellah.com. The authenticated study workspace and demo are at `/app`; `?auth=signup` and `?auth=login` open the corresponding dialogs for signed-out visitors. Authentication callbacks return to `/app`.
 
 Journal is retired from navigation and creation flows. Legacy journal records remain in the database and backups; the client presents them as editable notes so existing writing stays accessible. No production content is deleted or reset.
+
+## Personalized registration
+
+New registrations choose a learning language, purpose (skill, exam, understanding, exploration, or language practice), session length, and optional interests. These preferences are stored in Supabase Auth user metadata at signup and survive email confirmation. The authenticated `/api/onboarding` endpoint creates an owner-scoped workspace using a deterministic per-user ID, verifies access through RLS, and marks setup complete. Retries and concurrent tabs cannot create duplicate starter workspaces; an existing account without welcome metadata is left unchanged.
+
+Welcome preferences supply defaults for new study prompts; explicitly saved per-source preferences take priority. The starter checklist reflects actual reading, note, and review records. Session length does not schedule notifications, generate review history, or claim completed study. Browser integration tests simulate email confirmation and auth in the loopback harness; production email delivery is not exercised by that harness.

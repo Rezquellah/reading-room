@@ -1,5 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
+import {
+  welcomeStudyPreferences,
+  type OnboardingPreferences,
+} from "@/lib/onboarding";
 import MarkdownPreview from "./markdown-preview";
 import { markdownDocument } from "@/lib/markdown";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -21,8 +25,10 @@ export default function StudyBridge({
   source,
   language,
   onImported,
+  welcome,
 }: {
   source: Entry;
+  welcome?: OnboardingPreferences;
   language: string;
   onImported: () => Promise<void>;
 }) {
@@ -34,9 +40,14 @@ export default function StudyBridge({
     );
     return saved.success
       ? saved.data
-      : studyPreferencesSchema.parse({
-          explanationLanguage: language || "English",
-        });
+      : welcome
+        ? welcomeStudyPreferences({
+            ...welcome,
+            language: language || welcome.language,
+          })
+        : studyPreferencesSchema.parse({
+            explanationLanguage: language || "English",
+          });
   });
   const [showHelp, setShowHelp] = useState(false);
   const [coachingEnabled, setCoachingEnabled] = useState(

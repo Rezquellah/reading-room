@@ -22,7 +22,7 @@ export default function Privacy() {
             Rezquellah, handles information when you use the website and study
             app.
           </p>
-          <span className="privacy-date">Last updated: October 28, 2026</span>
+          <span className="privacy-date">Last updated: October 29, 2026</span>
         </header>
         <div className="privacy-summary">
           <strong>The essentials</strong>
@@ -53,8 +53,9 @@ export default function Privacy() {
               <p>
                 <strong>Study content.</strong> This includes workspaces, book
                 and article details, chapters, notes, vocabulary, review cards
-                and review history, practice exercises, saved study preferences,
-                and images you upload.
+                and review history, practice exercises, saved study preferences
+                (including your registration language, learning purpose,
+                interests, and preferred session length), and images you upload.
               </p>
               <p>
                 <strong>Technical information.</strong> Requests to the service

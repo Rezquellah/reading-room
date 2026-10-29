@@ -1,3 +1,4 @@
+import { onboardingSchema } from "@/lib/onboarding";
 import { supabase, configured } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -12,6 +13,7 @@ export async function POST(req: Request) {
       action: z.enum(["login", "signup", "reset", "update", "logout"]),
       email: z.email().optional(),
       password: z.string().min(8).optional(),
+      onboarding: onboardingSchema.optional(),
     })
     .refine(
       (v) =>
@@ -42,7 +44,12 @@ export async function POST(req: Request) {
     result = await db.auth.signUp({
       email: email!,
       password: password!,
-      options: { emailRedirectTo: `${origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${origin}/auth/callback`,
+        data: input.data.onboarding
+          ? { reading_room_onboarding: input.data.onboarding }
+          : {},
+      },
     });
   else
     result = await db.auth.signInWithPassword({
@@ -50,7 +57,17 @@ export async function POST(req: Request) {
       password: password!,
     });
   return NextResponse.json(
-    result.error ? { error: result.error.message } : { ok: true },
+    result.error
+      ? { error: result.error.message }
+      : {
+          ok: true,
+          signedIn:
+            "data" in result &&
+            result.data !== null &&
+            typeof result.data === "object" &&
+            "session" in result.data &&
+            Boolean(result.data.session),
+        },
     { status: result.error ? 400 : 200 },
   );
 }

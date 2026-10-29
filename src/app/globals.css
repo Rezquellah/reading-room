@@ -1844,3 +1844,228 @@ kbd {
     gap: 10px;
   }
 }
+.welcome-dialog {
+  width: calc(100% - 32px);
+  max-width: 630px;
+}
+.welcome-journey {
+  margin-top: 24px;
+}
+.welcome-progress {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  gap: 12px;
+  margin: 0 0 28px;
+}
+.welcome-progress li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 2px solid var(--line);
+  padding-top: 10px;
+}
+.welcome-progress li.reached {
+  border-color: var(--green);
+  color: var(--ink);
+}
+.welcome-progress li span {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--soft);
+  border-radius: 50%;
+}
+.welcome-progress li[aria-current] {
+  font-weight: 700;
+}
+.welcome-journey h3 {
+  font-size: 29px;
+  margin: 12px 0;
+}
+.welcome-journey h3:focus {
+  outline: none;
+}
+.welcome-description {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 22px;
+}
+.welcome-journey form {
+  display: grid;
+  gap: 18px;
+}
+.welcome-preview {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  background: var(--soft);
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.welcome-preview div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.welcome-preview strong {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+.welcome-preview span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.welcome-footnote {
+  font-size: 11px;
+  color: var(--muted);
+}
+.welcome-footnote a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.welcome-options,
+.welcome-rhythm {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+.welcome-rhythm {
+  grid-template-columns: 1fr 1fr;
+}
+.welcome-rhythm legend {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.welcome-option {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.welcome-option:has(input:checked) {
+  border-color: var(--green);
+  background: var(--soft);
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+.welcome-option input[type="radio"] {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--green);
+}
+.welcome-option span {
+  display: grid;
+  gap: 3px;
+}
+.welcome-option strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.welcome-option small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.welcome-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+}
+.welcome-signin {
+  margin: 20px auto 0;
+  display: block;
+  font-size: 12px;
+}
+.welcome-confirmation {
+  display: grid;
+  gap: 18px;
+}
+.welcome-confirmation p {
+  font-size: 13px;
+}
+.welcome-confirmation h3 {
+  margin: 0;
+}
+.welcome-starter {
+  border: 1px solid var(--line);
+  background: var(--soft);
+  padding: 28px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+}
+.welcome-starter h2 {
+  margin: 10px 0;
+}
+.welcome-starter p {
+  max-width: 680px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.welcome-starter ol {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.welcome-starter li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.welcome-starter li svg {
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  padding: 2px;
+  color: transparent;
+  width: 20px;
+  height: 20px;
+}
+.welcome-starter li.done svg {
+  color: var(--paper);
+  background: var(--green);
+  border-color: var(--green);
+}
+@media (max-width: 550px) {
+  .welcome-progress {
+    gap: 6px;
+  }
+  .welcome-progress li {
+    font-size: 10px;
+    gap: 4px;
+  }
+  .welcome-rhythm {
+    grid-template-columns: 1fr;
+  }
+  .welcome-option {
+    padding: 12px;
+  }
+  .welcome-starter {
+    padding: 20px;
+  }
+  .welcome-controls .primary {
+    flex: 1;
+    justify-content: center;
+  }
+}
