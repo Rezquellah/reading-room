@@ -127,11 +127,11 @@ export default function Room({
     [reviewed, setReviewed] = useState(0),
     [busy, setBusy] = useState(false),
     [reverse, setReverse] = useState(false),
-    [locale, setLocale] = useState("en"),
     [favorites, setFavorites] = useState(false),
     [since, setSince] = useState("");
   const [welcome, setWelcome] = useState<OnboardingPreferences | null>(null);
   const welcomeLoaded = useRef(false);
+  const locale = "en";
   const entryRef = useRef(entries);
   useEffect(() => {
     entryRef.current = entries;
@@ -165,7 +165,6 @@ export default function Room({
     queueMicrotask(() => {
       if (email) void load();
       setDark(localStorage.getItem("reading-theme") === "dark");
-      setLocale(localStorage.getItem("reading-locale") ?? "en");
     });
   }, [email]);
   useEffect(() => {
@@ -462,18 +461,7 @@ export default function Room({
               onClick={() => navigate(name)}
             >
               <Icon size={19} />
-              <span>
-                {locale === "fr"
-                  ? {
-                      Dashboard: "Accueil",
-                      Library: "Bibliothèque",
-                      Vocabulary: "Vocabulaire",
-                      Review: "Révision",
-                      Practice: "Pratique",
-                      Search: "Recherche",
-                    }[name]
-                  : name}
-              </span>
+              <span>{name}</span>
               {name === "Review" && due.length > 0 && <b>{due.length}</b>}
               {name === "Search" && <kbd>⌘ K</kbd>}
             </button>
@@ -972,11 +960,7 @@ export default function Room({
                   <span className="eyebrow">
                     A LITTLE READING. A LITTLE GROWING.
                   </span>
-                  <h1>
-                    {locale === "fr"
-                      ? "Bienvenue dans votre bibliothèque."
-                      : "Welcome to your reading room."}
-                  </h1>
+                  <h1>Welcome to your reading room.</h1>
                   <p className="subtitle">
                     A quiet place for big ideas. What will you discover today?
                   </p>
@@ -1699,19 +1683,7 @@ export default function Room({
                 </section>
                 <section className="panel">
                   <h2>Reading preferences</h2>
-                  <label>
-                    Interface language
-                    <select
-                      value={locale}
-                      onChange={(e) => {
-                        setLocale(e.target.value);
-                        localStorage.setItem("reading-locale", e.target.value);
-                      }}
-                    >
-                      <option value="en">English</option>
-                      <option value="fr">Français (navigation & dates)</option>
-                    </select>
-                  </label>
+                  <p className="muted">Interface language: English</p>
                   <label>
                     Paper size
                     <select

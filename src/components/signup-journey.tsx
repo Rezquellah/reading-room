@@ -186,8 +186,7 @@ export default function SignupJourney({
               </div>
             </div>
             <p className="welcome-footnote">
-              This sets your learning language. App navigation currently
-              supports English and French.
+              This sets your learning language. App navigation is in English.
             </p>
           </>
         )}

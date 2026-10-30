@@ -75,7 +75,7 @@ Commit SQL migrations with schema changes. Run checks before pushing. Configure 
 
 ## Current boundaries
 
-- English UI with French navigation/date formatting; comprehensive French translation remains unfinished.
+- The interface is English. Workspace learning languages personalize study prompts without changing navigation.
 - Article metadata and vocabulary definitions are manual. No scraping or paywall bypass.
 - Chapter order is edited through its number; no drag-and-drop reorder yet.
 - Contextual selection formatting and recall-card creation are available; slash commands, dedicated image caption fields, and a related-note graph remain future work.
@@ -104,3 +104,7 @@ Journal is retired from navigation and creation flows. Legacy journal records re
 New registrations choose a learning language, purpose (skill, exam, understanding, exploration, or language practice), session length, and optional interests. These preferences are stored in Supabase Auth user metadata at signup and survive email confirmation. The authenticated `/api/onboarding` endpoint creates an owner-scoped workspace using a deterministic per-user ID, verifies access through RLS, and marks setup complete. Retries and concurrent tabs cannot create duplicate starter workspaces; an existing account without welcome metadata is left unchanged.
 
 Welcome preferences supply defaults for new study prompts; explicitly saved per-source preferences take priority. The starter checklist reflects actual reading, note, and review records. Session length does not schedule notifications, generate review history, or claim completed study. Browser integration tests simulate email confirmation and auth in the loopback harness; production email delivery is not exercised by that harness.
+
+## Note editing
+
+The formatting toolbar stays visible while scrolling long notes. Selecting text opens quick formatting controls; the toolbar reflects the current selection. Notes include a paper-style writing surface, distraction-free mode, inline link editing, and literal-text find/replace. Ctrl/Cmd+F opens note search, Ctrl/Cmd+K edits a link, Ctrl/Cmd+S saves, and Escape closes panels or focus mode. Autosave persists content to Supabase.

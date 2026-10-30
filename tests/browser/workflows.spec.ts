@@ -530,3 +530,138 @@ test("legacy journal writing stays accessible as notes", async ({ page }) => {
       .content,
   ).toEqual(entry.data.content);
 });
+
+test("long notes keep formatting nearby and preserve selections, links, and edits", async ({
+  page,
+}) => {
+  const workspaceResponse = await page.request.post("/api/data", {
+    data: {
+      operation: "workspace",
+      value: {
+        name: "Editor checks",
+        language: "en",
+        color: "#355e49",
+        icon: "📚",
+      },
+    },
+  });
+  const workspace = await workspaceResponse.json();
+  const paragraphs = Array.from({ length: 45 }, (_, i) => ({
+    type: "paragraph",
+    content: [
+      {
+        type: "text",
+        text: `Paragraph ${i + 1}. A thoughtful reading note with enough detail to fill a long document.`,
+      },
+    ],
+  }));
+  paragraphs.push({
+    type: "paragraph",
+    content: [
+      {
+        type: "text",
+        text: "Selected phrase for formatting. Replace this marker.",
+      },
+    ],
+  });
+  const saved = await page.request.post("/api/data", {
+    data: {
+      value: {
+        workspace_id: workspace.id,
+        kind: "note",
+        title: "Long editor note",
+        data: { content: { type: "doc", content: paragraphs } },
+      },
+    },
+  });
+  expect(saved.ok()).toBeTruthy();
+  await page.goto("/app");
+  await page
+    .getByRole("button", { name: /Search/ })
+    .first()
+    .click();
+  await page.getByLabel("Search content").fill("Long editor note");
+  await page.getByText("Long editor note", { exact: true }).click();
+  const doc = page.getByRole("textbox", { name: "Note document" });
+  await expect(doc).toBeVisible();
+  const last = doc.locator("p").last();
+  await last.scrollIntoViewIfNeeded();
+  const controls = page.locator(".editor-controls");
+  const box = await controls.boundingBox();
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.y + box!.height).toBeLessThan(720);
+  await last.evaluate((element) => {
+    const range = document.createRange();
+    range.setStart(element.firstChild!, 0);
+    range.setEnd(element.firstChild!, 15);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    (element.closest("[contenteditable]") as HTMLElement).focus();
+  });
+  await page.getByRole("button", { name: "Bold", exact: true }).click();
+  await expect(last.locator("strong")).toHaveText("Selected phrase");
+  await expect(
+    page.getByRole("button", { name: "Bold", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(last.locator("strong")).toHaveCount(0);
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(last.locator("strong")).toHaveText("Selected phrase");
+  await page.getByLabel("Text style", { exact: true }).selectOption("2");
+  await expect(doc.locator("h2").last()).toContainText("Selected phrase");
+  await expect(page.getByLabel("Text style", { exact: true })).toHaveValue("2");
+  await page.getByRole("button", { name: "Add link", exact: true }).click();
+  await page
+    .getByLabel("Link URL", { exact: true })
+    .fill("https://example.com/reading");
+  await page.getByRole("button", { name: "Apply link", exact: true }).click();
+  await expect(
+    doc.locator('a[href="https://example.com/reading"]'),
+  ).toContainText("Selected phrase");
+  await page
+    .getByRole("button", { name: "Find in document", exact: true })
+    .click();
+  await page.getByLabel("Find", { exact: true }).fill("Replace this marker");
+  await page
+    .getByLabel("Replace with", { exact: true })
+    .fill("<b>Literal replacement</b>");
+  await page.getByRole("button", { name: "Replace all", exact: true }).click();
+  await expect(doc).toContainText("<b>Literal replacement</b>");
+  await expect(doc.locator("b")).toHaveCount(0);
+  await page.getByRole("button", { name: "Close find and replace" }).click();
+  await page.getByRole("button", { name: "Save now", exact: true }).click();
+  await expect(page.locator(".editor-meta [role=status]")).toHaveText("Saved");
+  await page.getByRole("button", { name: "Distraction-free mode" }).click();
+  await expect(page.locator(".editor")).toHaveClass(/focused/);
+  await page.screenshot({ path: "test-results/editor-desktop.png" });
+  await page
+    .getByRole("button", { name: "Distraction-free mode" })
+    .press("Escape");
+  await expect(page.locator(".editor")).not.toHaveClass(/focused/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(async () => {
+      const box = await page.locator(".sidebar").boundingBox();
+      return box ? box.x + box.width : 0;
+    })
+    .toBeLessThanOrEqual(1);
+  await doc.locator("h2").last().scrollIntoViewIfNeeded();
+  const mobileBox = await controls.boundingBox();
+  expect(mobileBox!.y).toBeGreaterThanOrEqual(0);
+  expect(mobileBox!.height).toBeLessThan(220);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: "test-results/editor-mobile.png" });
+  const after = await (await page.request.get("/api/data")).json();
+  const entry = after.entries.find(
+    (entry: { title: string }) => entry.title === "Long editor note",
+  );
+  expect(JSON.stringify(entry.data.content)).toContain("Literal replacement");
+  expect(JSON.stringify(entry.data.content)).toContain(
+    "https://example.com/reading",
+  );
+});

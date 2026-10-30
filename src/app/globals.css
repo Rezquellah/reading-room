@@ -2069,3 +2069,154 @@ kbd {
     justify-content: center;
   }
 }
+/* Keep writing controls attached to the viewport, not a clipped editor box. */
+.editor {
+  overflow: visible;
+  background: var(--paper);
+}
+.editor-controls {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: var(--surface);
+  border-radius: 9px 9px 0 0;
+  box-shadow: 0 4px 10px #0000000a;
+}
+.editor-controls .editor-meta {
+  background: var(--surface);
+  border-radius: 9px 9px 0 0;
+}
+.editor-controls .toolbar {
+  background: var(--surface);
+}
+.editor .toolbar button,
+.selection-toolbar button {
+  min-width: 32px;
+  min-height: 32px;
+}
+.editor .toolbar button.selected,
+.selection-toolbar button.selected {
+  background: var(--soft);
+  color: var(--green);
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+.editor .toolbar button:disabled {
+  opacity: 0.35;
+}
+.editor .document {
+  width: min(100%, 900px);
+  margin: 26px auto;
+  min-height: 700px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  overflow-wrap: anywhere;
+}
+.editor .document > * {
+  scroll-margin-top: 220px;
+}
+.editor .document:focus {
+  outline: none;
+}
+.editor .document .tableWrapper {
+  overflow-x: auto;
+}
+.editor .document table {
+  min-width: 320px;
+}
+.editor .editor-footer {
+  background: var(--surface);
+  border-radius: 0 0 9px 9px;
+}
+.editor.focused {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.editor.focused .editor-controls {
+  top: 0;
+}
+.editor-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.editor-panel label {
+  flex: 1;
+  min-width: 130px;
+  font-size: 11px;
+  gap: 5px;
+}
+.editor-panel input {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.editor-panel button {
+  min-height: 34px;
+  padding: 6px 9px;
+  border-radius: 5px;
+}
+.editor-panel button:hover {
+  background: var(--soft);
+}
+.editor-panel p {
+  width: 100%;
+  color: var(--accent);
+}
+.editor-panel [role="status"] {
+  padding-bottom: 8px;
+  color: var(--muted);
+}
+.selection-toolbar {
+  max-width: calc(100vw - 24px);
+  z-index: 60;
+}
+.selection-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 700px) {
+  .editor .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding: 7px 8px;
+  }
+  .editor .toolbar > * {
+    flex-shrink: 0;
+  }
+  .editor .toolbar select {
+    max-width: 130px;
+  }
+  .editor .toolbar button {
+    min-width: 38px;
+    min-height: 38px;
+  }
+  .editor .document {
+    margin: 0;
+    border: 0;
+    padding: 26px 20px;
+    min-height: 65vh;
+    box-shadow: none;
+  }
+  .editor-panel {
+    gap: 7px;
+    padding: 10px;
+  }
+  .editor-panel label {
+    min-width: 110px;
+  }
+  .editor.focused {
+    inset: 0;
+    border-radius: 0;
+  }
+  .editor-meta {
+    padding: 10px;
+    gap: 10px;
+  }
+}
